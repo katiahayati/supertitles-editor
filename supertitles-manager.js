@@ -1,6 +1,7 @@
 // Application state
 const state = {
     setName: null,
+    setFileName: null, // Track the filename to auto-save
     presentationData: null,
     annotationData: null,
     presentationName: null,
@@ -17,6 +18,8 @@ const changePresentationBtn = document.getElementById('change-presentation');
 const changeAnnotationBtn = document.getElementById('change-annotation');
 const presentationInput = document.getElementById('presentation-input');
 const annotationInput = document.getElementById('annotation-input');
+const exportPresentationBtn = document.getElementById('export-presentation');
+const exportPdfBtn = document.getElementById('export-pdf');
 const setInfo = document.getElementById('set-info');
 const presentationNameDisplay = document.getElementById('presentation-name');
 const annotationNameDisplay = document.getElementById('annotation-name');
@@ -41,6 +44,8 @@ function setupEventListeners() {
     presentationInput.addEventListener('change', handlePresentationChange);
     changeAnnotationBtn.addEventListener('click', () => annotationInput.click());
     annotationInput.addEventListener('change', handleAnnotationChange);
+    exportPresentationBtn.addEventListener('click', exportPresentation);
+    exportPdfBtn.addEventListener('click', exportPdf);
 
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -167,6 +172,7 @@ async function handleSetUpload(e) {
         }
 
         state.setName = setData.name || file.name.replace('.supertitles', '');
+        state.setFileName = file.name.replace('.supertitles', ''); // Remember filename for auto-save
         state.presentationData = setData.presentation;
         state.annotationData = setData.annotation;
 
@@ -219,8 +225,13 @@ function saveSet() {
         return;
     }
 
-    const filename = prompt('Enter filename (without extension):', state.setName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
-    if (!filename) return;
+    // If we don't have a filename yet (first save), ask for it
+    let filename = state.setFileName;
+    if (!filename) {
+        filename = prompt('Enter filename (without extension):', state.setName.replace(/[^a-z0-9]/gi, '_').toLowerCase());
+        if (!filename) return;
+        state.setFileName = filename;
+    }
 
     console.log('Saving set with names:', state.presentationName, state.annotationName);
 
@@ -248,6 +259,10 @@ function saveSet() {
 
     state.hasUnsavedChanges = false;
     updateUI();
+
+    // Automatically export presentation HTML and annotated PDF
+    exportPresentation();
+    exportPdf();
 }
 
 // Handle presentation file change
@@ -386,6 +401,34 @@ function enableEditing() {
     saveSetBtn.disabled = false;
     changePresentationBtn.disabled = false;
     changeAnnotationBtn.disabled = false;
+    exportPresentationBtn.disabled = false;
+    exportPdfBtn.disabled = false;
+}
+
+// Export presentation HTML
+function exportPresentation() {
+    if (!state.presentationData) {
+        alert('No presentation to export');
+        return;
+    }
+
+    // Tell the embedded editor to export
+    presentationFrame.contentWindow.postMessage({
+        type: 'export-html'
+    }, '*');
+}
+
+// Export annotated PDF
+function exportPdf() {
+    if (!state.annotationData || !state.annotationData.pdf) {
+        alert('No PDF to export');
+        return;
+    }
+
+    // Tell the embedded editor to export
+    annotationFrame.contentWindow.postMessage({
+        type: 'export-pdf'
+    }, '*');
 }
 
 // Update UI
