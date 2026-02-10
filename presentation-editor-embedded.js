@@ -315,17 +315,24 @@ function convertOdpToSlide(framesByClass, index) {
 
 // Add new slide
 function addSlide() {
+    // Use the type of the current slide, or default to 'title'
+    const currentSlideType = state.currentSlideIndex >= 0 && state.slides[state.currentSlideIndex]
+        ? state.slides[state.currentSlideIndex].type
+        : 'title';
+
     const newSlide = {
         id: `slide-${Date.now()}`,
-        type: 'title',
+        type: currentSlideType,
         title: 'New Slide',
         subtitle: '',
         content: '',
         styles: {}
     };
 
-    state.slides.push(newSlide);
-    state.currentSlideIndex = state.slides.length - 1;
+    // Insert after current slide, or at end if no slide is selected
+    const insertIndex = state.currentSlideIndex >= 0 ? state.currentSlideIndex + 1 : state.slides.length;
+    state.slides.splice(insertIndex, 0, newSlide);
+    state.currentSlideIndex = insertIndex;
 
     updateUI();
     displaySlide(state.currentSlideIndex);
@@ -496,6 +503,9 @@ function updateSlidesList() {
     state.slides.forEach((slide, index) => {
         const item = document.createElement('div');
         item.className = 'slide-item';
+        item.draggable = true;
+        item.dataset.index = index;
+
         if (index === state.currentSlideIndex) {
             item.classList.add('active');
         }
@@ -519,8 +529,64 @@ function updateSlidesList() {
         `;
 
         item.addEventListener('click', () => displaySlide(index));
+
+        // Drag and drop events
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragover', handleDragOver);
+        item.addEventListener('drop', handleDrop);
+        item.addEventListener('dragend', handleDragEnd);
+
         slidesList.appendChild(item);
     });
+}
+
+// Drag and drop handlers
+let draggedIndex = null;
+
+function handleDragStart(e) {
+    draggedIndex = parseInt(e.currentTarget.dataset.index);
+    e.currentTarget.style.opacity = '0.4';
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const dropIndex = parseInt(e.currentTarget.dataset.index);
+
+    if (draggedIndex !== null && draggedIndex !== dropIndex) {
+        // Remove the dragged slide
+        const [draggedSlide] = state.slides.splice(draggedIndex, 1);
+
+        // Insert at new position
+        state.slides.splice(dropIndex, 0, draggedSlide);
+
+        // Update current slide index if needed
+        if (state.currentSlideIndex === draggedIndex) {
+            state.currentSlideIndex = dropIndex;
+        } else if (draggedIndex < state.currentSlideIndex && dropIndex >= state.currentSlideIndex) {
+            state.currentSlideIndex--;
+        } else if (draggedIndex > state.currentSlideIndex && dropIndex <= state.currentSlideIndex) {
+            state.currentSlideIndex++;
+        }
+
+        updateUI();
+        notifyParent();
+    }
+
+    return false;
+}
+
+function handleDragEnd(e) {
+    e.currentTarget.style.opacity = '1';
+    draggedIndex = null;
 }
 
 // Update UI
@@ -733,6 +799,9 @@ window.addEventListener('message', (event) => {
         if (state.currentSlideIndex >= 0) {
             displaySlide(state.currentSlideIndex);
         }
+    } else if (event.data.type === 'export-html') {
+        // Parent requested export
+        saveAsHtml();
     }
 });
 

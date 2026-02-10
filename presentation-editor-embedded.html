@@ -178,7 +178,7 @@
             border: 2px solid #dee2e6;
             border-radius: 6px;
             padding: 12px;
-            cursor: pointer;
+            cursor: move;
             transition: all 0.2s;
         }
 
@@ -190,6 +190,14 @@
         .slide-item.active {
             border-color: #667eea;
             background: #e7f3ff;
+        }
+
+        .slide-item[draggable="true"]:hover {
+            cursor: grab;
+        }
+
+        .slide-item[draggable="true"]:active {
+            cursor: grabbing;
         }
 
         .slide-item-number {
