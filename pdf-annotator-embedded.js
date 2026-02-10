@@ -1,0 +1,1153 @@
+// PDF.js configuration
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// Application state
+const state = {
+    pdfDoc: null,
+    pdfData: null,
+    originalPdfFile: null,
+    currentPage: 1,
+    totalPages: 0,
+    scale: 1.5,
+    annotations: [],
+    annotationCounter: 1,
+    annotationPrefix: 'SLIDE',
+    dragging: null,
+    dragOffset: { x: 0, y: 0 },
+    wasDragging: false,
+    markerSize: 40, // Default marker size in pixels
+    viewMode: 'paginated', // 'paginated' or 'continuous'
+    deletedPages: [] // Track deleted page numbers
+};
+
+// DOM elements
+const canvas = document.getElementById('pdf-canvas');
+const ctx = canvas.getContext('2d');
+const annotationsLayer = document.getElementById('annotations-layer');
+const pdfUpload = document.getElementById('pdf-upload');
+const annotationsUpload = document.getElementById('annotations-upload');
+const saveAnnotationsBtn = document.getElementById('save-annotations');
+const exportPdfBtn = document.getElementById('export-pdf');
+const prevPageBtn = document.getElementById('prev-page');
+const nextPageBtn = document.getElementById('next-page');
+const pageInfo = document.getElementById('page-info');
+const zoomInBtn = document.getElementById('zoom-in');
+const zoomOutBtn = document.getElementById('zoom-out');
+const zoomLevel = document.getElementById('zoom-level');
+const annotationPrefixInput = document.getElementById('annotation-prefix');
+const nextIdDisplay = document.getElementById('next-id-display');
+const annotationsListContent = document.getElementById('annotations-list-content');
+const annotationCount = document.getElementById('annotation-count');
+const dropZone = document.getElementById('drop-zone');
+const canvasWrapper = document.getElementById('canvas-wrapper');
+const markerSizeIncrease = document.getElementById('marker-size-increase');
+const markerSizeDecrease = document.getElementById('marker-size-decrease');
+const markerSizeDisplay = document.getElementById('marker-size-display');
+const toggleViewBtn = document.getElementById('toggle-view');
+const viewModeText = document.getElementById('view-mode-text');
+const continuousCanvasWrapper = document.getElementById('continuous-canvas-wrapper');
+const deletePageBtn = document.getElementById('delete-page');
+
+// Initialize
+function init() {
+    setupEventListeners();
+    updateNextIdDisplay();
+}
+
+// Event listeners
+function setupEventListeners() {
+    pdfUpload.addEventListener('change', handlePdfUpload);
+    annotationsUpload.addEventListener('change', handleAnnotationsUpload);
+    saveAnnotationsBtn.addEventListener('click', saveAnnotations);
+    exportPdfBtn.addEventListener('click', exportAnnotatedPdf);
+    prevPageBtn.addEventListener('click', () => changePage(-1));
+    nextPageBtn.addEventListener('click', () => changePage(1));
+    zoomInBtn.addEventListener('click', () => zoom(0.1));
+    zoomOutBtn.addEventListener('click', () => zoom(-0.1));
+    annotationPrefixInput.addEventListener('input', handlePrefixChange);
+    canvasWrapper.addEventListener('click', handleCanvasClick);
+    markerSizeIncrease.addEventListener('click', () => adjustMarkerSize(5));
+    markerSizeDecrease.addEventListener('click', () => adjustMarkerSize(-5));
+    toggleViewBtn.addEventListener('click', toggleViewMode);
+    deletePageBtn.addEventListener('click', deleteCurrentPage);
+
+    // Drag and drop for PDF files
+    document.body.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    document.body.addEventListener('drop', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const files = e.dataTransfer.files;
+        if (files.length > 0 && files[0].type === 'application/pdf') {
+            loadPdf(files[0]);
+        }
+    });
+
+    // Mouse move and up for dragging annotations
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+}
+
+// Load PDF
+async function handlePdfUpload(e) {
+    const file = e.target.files[0];
+    if (file) {
+        await loadPdf(file, true);
+    }
+}
+
+async function loadPdf(file, clearState = true) {
+    try {
+        // Store the original file
+        state.originalPdfFile = file;
+
+        const arrayBuffer = await file.arrayBuffer();
+
+        // Convert to base64 FIRST before the ArrayBuffer gets detached
+        const base64Pdf = arrayBufferToBase64(arrayBuffer);
+        state.pdfData = base64Pdf;
+
+        const pdfBytes = new Uint8Array(arrayBuffer);
+
+        const loadingTask = pdfjsLib.getDocument({ data: pdfBytes });
+        state.pdfDoc = await loadingTask.promise;
+        state.totalPages = state.pdfDoc.numPages;
+
+        // Clear annotations and deleted pages when loading new PDF (but not when loading from project)
+        if (clearState) {
+            state.annotations = [];
+            state.deletedPages = [];
+            state.currentPage = 1;
+        } else {
+            // When loading from project, set to first active page
+            const activePages = getActivePages();
+            state.currentPage = activePages.length > 0 ? activePages[0] : 1;
+        }
+
+        updateAnnotationCounter();
+
+        dropZone.classList.add('hidden');
+        await renderPage(state.currentPage);
+        updatePageControls();
+        updateAnnotationsList();
+
+        saveAnnotationsBtn.disabled = false;
+        exportPdfBtn.disabled = false;
+        toggleViewBtn.disabled = false;
+        deletePageBtn.disabled = false;
+
+        // Notify parent after loading
+        notifyParent();
+    } catch (error) {
+        console.error('Error loading PDF:', error);
+        alert('Error loading PDF. Please try another file.');
+    }
+}
+
+// Render PDF page
+async function renderPage(pageNum) {
+    try {
+        const page = await state.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: state.scale });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        annotationsLayer.style.width = viewport.width + 'px';
+        annotationsLayer.style.height = viewport.height + 'px';
+
+        const renderContext = {
+            canvasContext: ctx,
+            viewport: viewport
+        };
+
+        await page.render(renderContext).promise;
+        renderAnnotations();
+    } catch (error) {
+        console.error('Error rendering page:', error);
+    }
+}
+
+// Page navigation
+function changePage(delta) {
+    const activePages = getActivePages();
+    const currentIndex = activePages.indexOf(state.currentPage);
+    const newIndex = currentIndex + delta;
+
+    if (newIndex >= 0 && newIndex < activePages.length) {
+        state.currentPage = activePages[newIndex];
+        renderPage(state.currentPage);
+        updatePageControls();
+    }
+}
+
+function updatePageControls() {
+    const activePage = getActivePage(state.currentPage);
+    const activePages = getActivePages();
+    pageInfo.textContent = `Page ${activePage} of ${activePages.length}`;
+    prevPageBtn.disabled = state.currentPage === 1;
+    nextPageBtn.disabled = state.currentPage === state.totalPages;
+    deletePageBtn.disabled = activePages.length <= 1; // Can't delete last page
+}
+
+// Get active (non-deleted) pages
+function getActivePages() {
+    const pages = [];
+    for (let i = 1; i <= state.totalPages; i++) {
+        if (!state.deletedPages.includes(i)) {
+            pages.push(i);
+        }
+    }
+    return pages;
+}
+
+// Get the display page number (excluding deleted pages)
+function getActivePage(pageNum) {
+    const activePages = getActivePages();
+    return activePages.indexOf(pageNum) + 1;
+}
+
+// Delete current page
+function deleteCurrentPage() {
+    if (state.viewMode === 'continuous') {
+        alert('Please switch to paginated view to delete pages.');
+        return;
+    }
+
+    const activePages = getActivePages();
+    if (activePages.length <= 1) {
+        alert('Cannot delete the last page.');
+        return;
+    }
+
+    if (!confirm(`Delete page ${getActivePage(state.currentPage)}? This will also remove all annotations on this page.`)) {
+        return;
+    }
+
+    // Mark page as deleted
+    state.deletedPages.push(state.currentPage);
+    state.deletedPages.sort((a, b) => a - b);
+
+    // Remove annotations for this page
+    state.annotations = state.annotations.filter(a => a.page !== state.currentPage);
+
+    // Navigate to next available page
+    const currentIndex = activePages.indexOf(state.currentPage);
+    const remainingPages = getActivePages();
+
+    if (remainingPages.length > 0) {
+        // Go to the next page if available, otherwise previous
+        if (currentIndex < remainingPages.length) {
+            state.currentPage = remainingPages[currentIndex];
+        } else {
+            state.currentPage = remainingPages[currentIndex - 1];
+        }
+    }
+
+    renderPage(state.currentPage);
+    updatePageControls();
+    updateAnnotationsList();
+}
+
+// Delete page (for continuous view)
+function deletePage(pageNum) {
+    const activePages = getActivePages();
+    if (activePages.length <= 1) {
+        alert('Cannot delete the last page.');
+        return;
+    }
+
+    if (!confirm(`Delete page ${getActivePage(pageNum)}? This will also remove all annotations on this page.`)) {
+        return;
+    }
+
+    // Mark page as deleted
+    state.deletedPages.push(pageNum);
+    state.deletedPages.sort((a, b) => a - b);
+
+    // Remove annotations for this page
+    state.annotations = state.annotations.filter(a => a.page !== pageNum);
+
+    // Update display
+    const scrollPos = continuousCanvasWrapper.scrollTop;
+    renderContinuousView().then(() => {
+        continuousCanvasWrapper.scrollTop = scrollPos;
+    });
+
+    const newActivePages = getActivePages();
+    pageInfo.textContent = `All ${newActivePages.length} pages`;
+    updateAnnotationsList();
+}
+
+// Zoom
+function zoom(delta) {
+    state.scale = Math.max(0.5, Math.min(3, state.scale + delta));
+    zoomLevel.textContent = Math.round(state.scale * 100) + '%';
+    if (state.viewMode === 'paginated') {
+        renderPage(state.currentPage);
+    } else {
+        // Save scroll position before re-rendering
+        const scrollPos = continuousCanvasWrapper.scrollTop;
+        renderContinuousView().then(() => {
+            // Restore scroll position after re-rendering
+            continuousCanvasWrapper.scrollTop = scrollPos;
+        });
+    }
+}
+
+// Adjust marker size
+function adjustMarkerSize(delta) {
+    state.markerSize = Math.max(20, Math.min(100, state.markerSize + delta));
+    markerSizeDisplay.textContent = state.markerSize + 'px';
+    if (state.viewMode === 'paginated') {
+        renderAnnotations();
+    } else {
+        // Update all existing markers without re-rendering pages
+        const allMarkers = continuousCanvasWrapper.querySelectorAll('.annotation-marker');
+        allMarkers.forEach(marker => {
+            marker.style.width = state.markerSize + 'px';
+            marker.style.height = state.markerSize + 'px';
+        });
+    }
+}
+
+// Toggle between paginated and continuous view
+async function toggleViewMode() {
+    if (state.viewMode === 'paginated') {
+        state.viewMode = 'continuous';
+        viewModeText.textContent = 'Paginated View';
+        canvasWrapper.style.display = 'none';
+        continuousCanvasWrapper.style.display = 'flex';
+        prevPageBtn.disabled = true;
+        nextPageBtn.disabled = true;
+        deletePageBtn.disabled = true;
+        const activePages = getActivePages();
+        pageInfo.textContent = `All ${activePages.length} pages`;
+        await renderContinuousView();
+    } else {
+        state.viewMode = 'paginated';
+        viewModeText.textContent = 'Continuous View';
+        canvasWrapper.style.display = 'inline-block';
+        continuousCanvasWrapper.style.display = 'none';
+        updatePageControls();
+        await renderPage(state.currentPage);
+        renderAnnotations();
+    }
+}
+
+// Render all pages in continuous view
+async function renderContinuousView() {
+    continuousCanvasWrapper.innerHTML = '';
+
+    const activePages = getActivePages();
+
+    for (let pageNum = 1; pageNum <= state.totalPages; pageNum++) {
+        // Skip deleted pages
+        if (state.deletedPages.includes(pageNum)) {
+            continue;
+        }
+
+        const pageContainer = document.createElement('div');
+        pageContainer.className = 'page-container';
+        pageContainer.dataset.pageNum = pageNum;
+
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.className = 'page-canvas';
+
+        const pageAnnotationsLayer = document.createElement('div');
+        pageAnnotationsLayer.className = 'page-annotations-layer';
+        pageAnnotationsLayer.dataset.pageNum = pageNum;
+
+        // Add delete button for each page (only if more than 1 page left)
+        if (activePages.length > 1) {
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'page-delete-btn';
+            deleteBtn.textContent = `Delete Page ${getActivePage(pageNum)}`;
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                deletePage(pageNum);
+            });
+            pageContainer.appendChild(deleteBtn);
+        }
+
+        pageContainer.appendChild(pageCanvas);
+        pageContainer.appendChild(pageAnnotationsLayer);
+        continuousCanvasWrapper.appendChild(pageContainer);
+
+        // Render the PDF page
+        const page = await state.pdfDoc.getPage(pageNum);
+        const viewport = page.getViewport({ scale: state.scale });
+
+        pageCanvas.width = viewport.width;
+        pageCanvas.height = viewport.height;
+        pageAnnotationsLayer.style.width = viewport.width + 'px';
+        pageAnnotationsLayer.style.height = viewport.height + 'px';
+
+        const renderContext = {
+            canvasContext: pageCanvas.getContext('2d'),
+            viewport: viewport
+        };
+
+        await page.render(renderContext).promise;
+
+        // Render annotations for this page
+        const pageAnnotations = state.annotations.filter(a => a.page === pageNum);
+        pageAnnotations.forEach(annotation => {
+            const marker = createAnnotationMarker(annotation, pageCanvas);
+            pageAnnotationsLayer.appendChild(marker);
+        });
+
+        // Add click handler for adding annotations
+        pageContainer.addEventListener('click', (e) => handleContinuousCanvasClick(e, pageNum, pageCanvas));
+    }
+}
+
+// Handle clicks in continuous view
+function handleContinuousCanvasClick(e, pageNum, pageCanvas) {
+    if (!state.pdfDoc) return;
+
+    // Don't add annotation if we just finished dragging
+    if (state.wasDragging) {
+        state.wasDragging = false;
+        return;
+    }
+
+    // Check if click was on the canvas (not on annotation marker)
+    if (e.target.closest('.annotation-marker')) {
+        return;
+    }
+
+    const rect = pageCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    const annotationId = `${state.annotationPrefix}-${String(state.annotationCounter).padStart(3, '0')}`;
+
+    const annotation = {
+        id: annotationId,
+        page: pageNum,
+        x: x,
+        y: y
+    };
+
+    state.annotations.push(annotation);
+    state.annotationCounter++;
+    notifyParent();
+
+    // Just add the marker to the specific page without re-rendering everything
+    const pageContainer = pageCanvas.closest('.page-container');
+    const pageAnnotationsLayer = pageContainer.querySelector('.page-annotations-layer');
+    const marker = createAnnotationMarker(annotation, pageCanvas);
+    pageAnnotationsLayer.appendChild(marker);
+
+    updateAnnotationsList();
+    updateNextIdDisplay();
+}
+
+// Handle canvas click to add annotation
+function handleCanvasClick(e) {
+    if (!state.pdfDoc) return;
+
+    // Don't add annotation if we just finished dragging
+    if (state.wasDragging) {
+        state.wasDragging = false;
+        return;
+    }
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width;
+    const y = (e.clientY - rect.top) / rect.height;
+
+    const annotationId = `${state.annotationPrefix}-${String(state.annotationCounter).padStart(3, '0')}`;
+
+    const annotation = {
+        id: annotationId,
+        page: state.currentPage,
+        x: x,
+        y: y
+    };
+
+    state.annotations.push(annotation);
+    state.annotationCounter++;
+    notifyParent();
+
+    renderAnnotations();
+    updateAnnotationsList();
+    updateNextIdDisplay();
+}
+
+// Handle mouse move for dragging
+function handleMouseMove(e) {
+    if (!state.dragging) return;
+
+    // Mark that we're actively dragging
+    state.wasDragging = true;
+
+    // Find the marker element
+    let marker;
+    if (state.viewMode === 'paginated') {
+        marker = annotationsLayer.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
+    } else {
+        marker = continuousCanvasWrapper.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
+    }
+
+    if (!marker) return;
+
+    // Get the canvas for this marker's page
+    let targetCanvas;
+    if (state.viewMode === 'paginated') {
+        targetCanvas = canvas;
+    } else {
+        const pageContainer = marker.closest('.page-container');
+        targetCanvas = pageContainer.querySelector('.page-canvas');
+    }
+
+    const rect = targetCanvas.getBoundingClientRect();
+
+    // Calculate new position relative to canvas
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+
+    // Clamp to canvas bounds
+    const clampedX = Math.max(0, Math.min(rect.width, canvasX));
+    const clampedY = Math.max(0, Math.min(rect.height, canvasY));
+
+    // Convert to normalized coordinates (0-1)
+    const x = clampedX / rect.width;
+    const y = clampedY / rect.height;
+
+    // Update the annotation position
+    state.dragging.x = x;
+    state.dragging.y = y;
+
+    // Update the marker position in real-time
+    marker.style.left = (x * targetCanvas.width) + 'px';
+    marker.style.top = (y * targetCanvas.height) + 'px';
+}
+
+// Handle mouse up to finish dragging
+function handleMouseUp(e) {
+    if (state.dragging) {
+        // Find marker in current view
+        let marker;
+        if (state.viewMode === 'paginated') {
+            marker = annotationsLayer.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
+        } else {
+            marker = continuousCanvasWrapper.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
+        }
+
+        if (marker) {
+            marker.classList.remove('dragging');
+        }
+
+        state.dragging = null;
+        if (state.viewMode === 'paginated') {
+            canvasWrapper.style.cursor = 'crosshair';
+        }
+
+        // Update the annotations list in case page order changed
+        updateAnnotationsList();
+
+        // Reset wasDragging flag after a short delay to allow click event to process
+        setTimeout(() => {
+            state.wasDragging = false;
+        }, 50);
+    }
+}
+
+// Render annotations on current page
+function renderAnnotations() {
+    annotationsLayer.innerHTML = '';
+
+    const pageAnnotations = state.annotations.filter(a => a.page === state.currentPage);
+
+    pageAnnotations.forEach(annotation => {
+        const marker = createAnnotationMarker(annotation);
+        annotationsLayer.appendChild(marker);
+    });
+}
+
+// Create visual annotation marker
+function createAnnotationMarker(annotation, targetCanvas = null) {
+    const canvasEl = targetCanvas || canvas;
+    const marker = document.createElement('div');
+    marker.className = 'annotation-marker';
+    marker.style.width = state.markerSize + 'px';
+    marker.style.height = state.markerSize + 'px';
+    marker.style.left = (annotation.x * canvasEl.width) + 'px';
+    marker.style.top = (annotation.y * canvasEl.height) + 'px';
+    marker.dataset.annotationId = annotation.id;
+    marker.dataset.pageNum = annotation.page;
+
+    // Red asterisk SVG (no label)
+    marker.innerHTML = `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <path d="M50 0 L50 100 M0 50 L100 50 M15 15 L85 85 M85 15 L15 85"
+                  stroke="#dc3545"
+                  stroke-width="12"
+                  stroke-linecap="round"/>
+            <circle cx="50" cy="50" r="8" fill="#dc3545"/>
+        </svg>
+    `;
+
+    // Handle drag start
+    marker.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+
+        // Start dragging
+        state.dragging = annotation;
+
+        const rect = canvas.getBoundingClientRect();
+        const markerRect = marker.getBoundingClientRect();
+
+        // Calculate offset from marker center
+        state.dragOffset = {
+            x: e.clientX - markerRect.left - markerRect.width / 2,
+            y: e.clientY - markerRect.top - markerRect.height / 2
+        };
+
+        marker.classList.add('dragging');
+        if (state.viewMode === 'paginated') {
+            canvasWrapper.style.cursor = 'grabbing';
+        }
+    });
+
+    // Handle right-click for delete
+    marker.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (confirm(`Delete annotation "${annotation.id}"?`)) {
+            deleteAnnotation(annotation.id);
+        }
+    });
+
+    return marker;
+}
+
+// Delete annotation
+function deleteAnnotation(id) {
+    state.annotations = state.annotations.filter(a => a.id !== id);
+    if (state.viewMode === 'paginated') {
+        renderAnnotations();
+    } else {
+        // Just remove the specific marker without re-rendering
+        const marker = continuousCanvasWrapper.querySelector(`[data-annotation-id="${id}"]`);
+        if (marker) {
+            marker.remove();
+        }
+    }
+    updateAnnotationsList();
+    notifyParent();
+}
+
+// Update annotations list
+function updateAnnotationsList() {
+    annotationsListContent.innerHTML = '';
+    annotationCount.textContent = state.annotations.length;
+
+    // Sort by page, then by ID
+    const sortedAnnotations = [...state.annotations].sort((a, b) => {
+        if (a.page !== b.page) return a.page - b.page;
+        return a.id.localeCompare(b.id);
+    });
+
+    sortedAnnotations.forEach(annotation => {
+        const item = document.createElement('div');
+        item.className = 'annotation-item';
+        item.innerHTML = `
+            <div class="annotation-info">
+                <div class="annotation-id">${annotation.id}</div>
+                <div class="annotation-page">Page ${annotation.page}</div>
+            </div>
+            <button class="annotation-delete" data-id="${annotation.id}">×</button>
+        `;
+
+        item.querySelector('.annotation-info').addEventListener('click', () => {
+            if (state.currentPage !== annotation.page) {
+                state.currentPage = annotation.page;
+                renderPage(state.currentPage);
+                updatePageControls();
+            }
+        });
+
+        item.querySelector('.annotation-delete').addEventListener('click', () => {
+            deleteAnnotation(annotation.id);
+        });
+
+        annotationsListContent.appendChild(item);
+    });
+}
+
+// Handle prefix change
+function handlePrefixChange(e) {
+    state.annotationPrefix = e.target.value || 'SLIDE';
+    updateNextIdDisplay();
+}
+
+// Update next ID display
+function updateNextIdDisplay() {
+    const nextId = `${state.annotationPrefix}-${String(state.annotationCounter).padStart(3, '0')}`;
+    nextIdDisplay.textContent = `Next ID: ${nextId}`;
+}
+
+// Update annotation counter based on existing annotations
+function updateAnnotationCounter() {
+    if (state.annotations.length === 0) {
+        state.annotationCounter = 1;
+    } else {
+        // Find the highest number used with current prefix
+        const numbers = state.annotations
+            .filter(a => a.id.startsWith(state.annotationPrefix + '-'))
+            .map(a => {
+                const match = a.id.match(/-(\d+)$/);
+                return match ? parseInt(match[1]) : 0;
+            });
+
+        state.annotationCounter = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
+    }
+    updateNextIdDisplay();
+}
+
+// Save project file (PDF + annotations bundled together)
+async function saveAnnotations() {
+    if (!state.originalPdfFile) {
+        alert('Please load a PDF first');
+        return;
+    }
+
+    try {
+        // Create project data
+        const projectData = {
+            version: '1.0',
+            annotationPrefix: state.annotationPrefix,
+            annotations: state.annotations,
+            markerSize: state.markerSize,
+            scale: state.scale,
+            viewMode: state.viewMode,
+            deletedPages: state.deletedPages,
+            metadata: {
+                totalPages: state.totalPages,
+                pdfFileName: state.originalPdfFile.name,
+                createdAt: new Date().toISOString(),
+                modifiedAt: new Date().toISOString()
+            }
+        };
+
+        // Read PDF as base64
+        const pdfArrayBuffer = await state.originalPdfFile.arrayBuffer();
+        const pdfBase64 = arrayBufferToBase64(pdfArrayBuffer);
+
+        // Combine everything into one project file
+        const projectFile = {
+            ...projectData,
+            pdfData: pdfBase64
+        };
+
+        // Prompt user for filename
+        const defaultName = state.originalPdfFile.name.replace('.pdf', '') + '-project';
+        const fileName = prompt('Enter project file name:', defaultName);
+
+        if (!fileName) {
+            return; // User cancelled
+        }
+
+        const blob = new Blob([JSON.stringify(projectFile)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName.endsWith('.json') ? fileName : fileName + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert('Project saved successfully!');
+    } catch (error) {
+        console.error('Error saving project:', error);
+        alert('Error saving project. Please try again.');
+    }
+}
+
+// Helper function to convert ArrayBuffer to base64
+function arrayBufferToBase64(buffer) {
+    let binary = '';
+    const bytes = new Uint8Array(buffer);
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+// Helper function to convert base64 to ArrayBuffer
+function base64ToArrayBuffer(base64) {
+    const binary = atob(base64);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+// Load project file (PDF + annotations)
+async function handleAnnotationsUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+
+        // Check if this is a project file with embedded PDF
+        if (data.pdfData && data.annotations && Array.isArray(data.annotations)) {
+            // Restore deleted pages first (before loading PDF)
+            if (data.deletedPages && Array.isArray(data.deletedPages)) {
+                state.deletedPages = data.deletedPages;
+            }
+
+            // Load the PDF from the project file (don't clear state)
+            const pdfArrayBuffer = base64ToArrayBuffer(data.pdfData);
+            const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
+            const pdfFile = new File([pdfBlob], data.metadata?.pdfFileName || 'document.pdf', { type: 'application/pdf' });
+
+            await loadPdf(pdfFile, false);
+
+            // Load the annotations
+            state.annotations = data.annotations;
+            if (data.annotationPrefix) {
+                state.annotationPrefix = data.annotationPrefix;
+                annotationPrefixInput.value = data.annotationPrefix;
+            }
+
+            // Restore marker size if saved
+            if (data.markerSize) {
+                state.markerSize = data.markerSize;
+                markerSizeDisplay.textContent = state.markerSize + 'px';
+            }
+
+            // Restore zoom scale if saved
+            if (data.scale) {
+                state.scale = data.scale;
+                zoomLevel.textContent = Math.round(state.scale * 100) + '%';
+            }
+
+            // Restore view mode if saved
+            if (data.viewMode && data.viewMode === 'continuous') {
+                // Switch to continuous view
+                state.viewMode = 'continuous';
+                viewModeText.textContent = 'Paginated View';
+                canvasWrapper.style.display = 'none';
+                continuousCanvasWrapper.style.display = 'flex';
+                prevPageBtn.disabled = true;
+                nextPageBtn.disabled = true;
+                const activePages = getActivePages();
+                pageInfo.textContent = `All ${activePages.length} pages`;
+                await renderContinuousView();
+            } else {
+                // Default paginated view
+                await renderPage(state.currentPage);
+                renderAnnotations();
+            }
+
+            updateAnnotationCounter();
+            updateAnnotationsList();
+
+            notifyParent();
+
+            const activePages = getActivePages();
+            alert(`Project loaded successfully! ${state.annotations.length} annotations on ${activePages.length} pages.`);
+        }
+        // Fallback: old format with just annotations
+        else if (data.annotations && Array.isArray(data.annotations)) {
+            if (!state.pdfDoc) {
+                alert('Please load a PDF first, or use a project file that includes the PDF.');
+                return;
+            }
+
+            state.annotations = data.annotations;
+            if (data.annotationPrefix) {
+                state.annotationPrefix = data.annotationPrefix;
+                annotationPrefixInput.value = data.annotationPrefix;
+            }
+
+            // Restore marker size if saved
+            if (data.markerSize) {
+                state.markerSize = data.markerSize;
+                markerSizeDisplay.textContent = state.markerSize + 'px';
+            }
+
+            // Restore zoom scale if saved
+            if (data.scale) {
+                state.scale = data.scale;
+                zoomLevel.textContent = Math.round(state.scale * 100) + '%';
+            }
+
+            // Restore deleted pages if saved
+            if (data.deletedPages && Array.isArray(data.deletedPages)) {
+                state.deletedPages = data.deletedPages;
+            }
+
+            // Restore view mode if saved
+            if (data.viewMode && data.viewMode === 'continuous') {
+                state.viewMode = 'continuous';
+                viewModeText.textContent = 'Paginated View';
+                canvasWrapper.style.display = 'none';
+                continuousCanvasWrapper.style.display = 'flex';
+                prevPageBtn.disabled = true;
+                nextPageBtn.disabled = true;
+                const activePages = getActivePages();
+                pageInfo.textContent = `All ${activePages.length} pages`;
+                await renderContinuousView();
+            } else {
+                await renderPage(state.currentPage);
+                renderAnnotations();
+            }
+
+            updateAnnotationCounter();
+            updateAnnotationsList();
+
+            const activePages = getActivePages();
+            alert(`Loaded ${state.annotations.length} annotations on ${activePages.length} pages successfully!`);
+        } else {
+            throw new Error('Invalid project file format');
+        }
+    } catch (error) {
+        console.error('Error loading project:', error);
+        alert('Error loading project file. Please check the file format.');
+    }
+}
+
+// Export PDF with annotations rendered
+async function exportAnnotatedPdf() {
+    if (!state.pdfDoc || !state.originalPdfFile) {
+        alert('Please load a PDF first');
+        return;
+    }
+
+    try {
+        // Load pdf-lib if not already loaded
+        if (typeof PDFLib === 'undefined') {
+            const pdfLibScript = document.createElement('script');
+            pdfLibScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+
+            await new Promise((resolve, reject) => {
+                pdfLibScript.onload = resolve;
+                pdfLibScript.onerror = reject;
+                document.head.appendChild(pdfLibScript);
+            });
+        }
+
+        const { PDFDocument, rgb } = PDFLib;
+
+        // Read the original PDF file as ArrayBuffer
+        const arrayBuffer = await state.originalPdfFile.arrayBuffer();
+
+        // Load the original PDF
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const pages = pdfDoc.getPages();
+
+        // Add annotations to each page BEFORE removing pages
+        for (let pageNum = 1; pageNum <= state.totalPages; pageNum++) {
+            // Skip deleted pages - don't add annotations to them
+            if (state.deletedPages.includes(pageNum)) {
+                continue;
+            }
+
+            const pageAnnotations = state.annotations.filter(a => a.page === pageNum);
+
+            if (pageAnnotations.length > 0) {
+                const page = pages[pageNum - 1];
+                const { width, height } = page.getSize();
+
+                pageAnnotations.forEach(annotation => {
+                    // Calculate position (PDF coordinates start from bottom-left)
+                    const x = annotation.x * width;
+                    const y = height - (annotation.y * height);
+
+                    // Draw red asterisk using current marker size
+                    // Convert screen pixels to PDF points by scaling relative to canvas
+                    const canvasWidth = canvas.width / state.scale;
+                    const scaleFactor = width / canvasWidth;
+                    const size = (state.markerSize / 2) * scaleFactor; // Half marker size for radius
+                    const color = rgb(0.86, 0.21, 0.27); // Red color
+                    const thickness = Math.max(1, size / 5); // Scale line thickness
+
+                    // Draw lines forming asterisk
+                    page.drawLine({
+                        start: { x: x, y: y - size },
+                        end: { x: x, y: y + size },
+                        thickness: thickness,
+                        color: color
+                    });
+
+                    page.drawLine({
+                        start: { x: x - size, y: y },
+                        end: { x: x + size, y: y },
+                        thickness: thickness,
+                        color: color
+                    });
+
+                    page.drawLine({
+                        start: { x: x - size * 0.7, y: y - size * 0.7 },
+                        end: { x: x + size * 0.7, y: y + size * 0.7 },
+                        thickness: thickness,
+                        color: color
+                    });
+
+                    page.drawLine({
+                        start: { x: x - size * 0.7, y: y + size * 0.7 },
+                        end: { x: x + size * 0.7, y: y - size * 0.7 },
+                        thickness: thickness,
+                        color: color
+                    });
+
+                    // Draw circle in center
+                    page.drawCircle({
+                        x: x,
+                        y: y,
+                        size: Math.max(1, size / 5),
+                        color: color
+                    });
+                });
+            }
+        }
+
+        // Prompt user for filename
+        const defaultName = state.originalPdfFile.name.replace('.pdf', '') + '-annotated';
+        const fileName = prompt('Enter PDF file name:', defaultName);
+
+        if (!fileName) {
+            return; // User cancelled
+        }
+
+        // Now remove deleted pages (in reverse order to maintain indices)
+        for (let i = state.deletedPages.length - 1; i >= 0; i--) {
+            const pageIndex = state.deletedPages[i] - 1;
+            pdfDoc.removePage(pageIndex);
+        }
+
+        // Save the PDF
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName.endsWith('.pdf') ? fileName : fileName + '.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert('Annotated PDF exported successfully!');
+    } catch (error) {
+        console.error('Error exporting PDF:', error);
+        alert('Error exporting PDF. Please try again.');
+    }
+}
+
+// Notify parent when data changes
+function notifyParent() {
+    if (window.parent !== window) {
+        window.parent.postMessage({
+            type: 'annotation-changed',
+            data: {
+                version: 1,
+                pdf: state.pdfData,
+                annotations: state.annotations,
+                settings: state.settings
+            },
+            fileName: state.originalPdfFile?.name || null
+        }, '*');
+    }
+}
+
+// Listen for messages from parent
+window.addEventListener('message', async (event) => {
+    if (event.data.type === 'load-data') {
+        const data = event.data.data;
+        const metadata = event.data.metadata;
+
+        if (data.pdf) {
+            // Load PDF from base64
+            state.pdfData = data.pdf;
+            const pdfBytes = base64ToArrayBuffer(data.pdf);
+            await loadPdfFromBytes(pdfBytes);
+
+            // Store filename from metadata if available
+            if (metadata && metadata.fileName) {
+                // Create a fake file object to store the name
+                state.originalPdfFile = { name: metadata.fileName };
+            }
+        }
+
+        if (data.annotations) {
+            state.annotations = data.annotations;
+            renderAnnotations();
+        }
+
+        if (data.settings) {
+            state.settings = { ...state.settings, ...data.settings };
+            applySettings();
+        }
+    }
+});
+
+// Helper: Convert base64 to ArrayBuffer
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+}
+
+// Load PDF from bytes
+async function loadPdfFromBytes(arrayBuffer) {
+    const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+    state.pdfDoc = await loadingTask.promise;
+    state.totalPages = state.pdfDoc.numPages;
+    state.currentPage = 1;
+
+    dropZone.classList.add('hidden');
+    await renderPage(state.currentPage);
+    updatePageControls();
+    updateAnnotationsList();
+    renderAnnotations();
+
+    // Don't notify parent here - this is called when loading FROM parent
+    // The parent already has the data
+}
+
+// Apply settings from loaded data
+function applySettings() {
+    if (state.settings.zoom) {
+        state.zoom = state.settings.zoom;
+    }
+    if (state.settings.markerSize) {
+        state.markerSize = state.settings.markerSize;
+        document.getElementById('marker-size').value = state.markerSize;
+        document.getElementById('marker-size-value').textContent = state.markerSize;
+    }
+    if (state.settings.viewMode) {
+        state.viewMode = state.settings.viewMode;
+        document.getElementById('view-mode').value = state.viewMode;
+        updateViewMode();
+    }
+    if (state.settings.deletedPages) {
+        state.deletedPages = new Set(state.settings.deletedPages);
+    }
+}
+
+// Initialize the application when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+        init();
+        // Notify parent we're ready
+        window.parent.postMessage({ type: 'annotation-ready' }, '*');
+    });
+} else {
+    init();
+    // Notify parent we're ready
+    window.parent.postMessage({ type: 'annotation-ready' }, '*');
+}

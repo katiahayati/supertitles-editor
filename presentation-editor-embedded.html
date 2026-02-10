@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Editor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-accent {
+            background: #e83e8c;
+            color: white;
+        }
+
+        .btn-accent:hover:not(:disabled) {
+            background: #d63384;
+            transform: translateY(-2px);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 13px;
+        }
+
+        .btn-delete {
+            padding: 8px 16px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        .btn-delete:hover:not(:disabled) {
+            background: #c82333;
+            transform: translateY(-2px);
+        }
+
+        .btn-delete:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        #slide-counter {
+            background: #e7f3ff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            min-height: 600px;
+        }
+
+        .slides-panel {
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: calc(100vh - 300px);
+        }
+
+        .slides-panel h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        #slides-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .slide-item {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .slide-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .slide-item.active {
+            border-color: #667eea;
+            background: #e7f3ff;
+        }
+
+        .slide-item-number {
+            font-weight: 700;
+            color: #667eea;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .slide-item-type {
+            font-size: 11px;
+            color: #6c757d;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+
+        .slide-item-preview {
+            font-size: 12px;
+            color: #6c757d;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .editor-panel {
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .editor-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .editor-header h3 {
+            color: #333;
+        }
+
+        .slide-editor {
+            flex: 1;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 30px;
+            background: white;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+
+        .slide-preview {
+            width: 100%;
+        }
+
+        .slide-preview h1 {
+            color: #333;
+            font-size: 3em;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .slide-preview h2 {
+            color: #555;
+            margin-bottom: 15px;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        .slide-preview p {
+            color: #555;
+            line-height: 1.6;
+            font-size: 1.8em;
+            white-space: pre-wrap;
+        }
+
+        .slide-properties {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .slide-properties h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .property-group {
+            margin-bottom: 15px;
+        }
+
+        .property-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .property-group input,
+        .property-group textarea,
+        .property-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        .property-group input:focus,
+        .property-group textarea:focus,
+        .property-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .property-group input:disabled,
+        .property-group textarea:disabled,
+        .property-group select:disabled {
+            background: #e9ecef;
+            cursor: not-allowed;
+        }
+
+        .property-group textarea {
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Presentation Editor</h1>
+            <p class="subtitle">Create presentations from ODP files</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <button id="new-presentation" class="btn btn-secondary">New Presentation</button>
+                <button id="load-odp" class="btn btn-primary">Load ODP</button>
+                <input type="file" id="odp-input" accept=".odp" style="display: none;">
+                <button id="load-project" class="btn btn-primary">Load Project</button>
+                <input type="file" id="project-input" accept=".json" style="display: none;">
+            </div>
+
+            <div class="control-group">
+                <button id="save-project" class="btn btn-success" disabled>Save Project</button>
+                <button id="save-html" class="btn btn-success" disabled>Export HTML</button>
+                <button id="add-slide" class="btn btn-accent" disabled>Add Slide</button>
+            </div>
+
+            <div class="control-group">
+                <span id="slide-counter">0 slides</span>
+            </div>
+        </div>
+
+        <div class="editor-container">
+            <div class="slides-panel">
+                <h3>Slides</h3>
+                <div id="slides-list"></div>
+            </div>
+
+            <div class="editor-panel">
+                <div class="editor-header">
+                    <h3>Slide <span id="current-slide-number">-</span></h3>
+                    <button id="delete-slide" class="btn-delete" disabled>Delete Slide</button>
+                </div>
+
+                <div class="slide-properties">
+                    <h4>Slide Properties</h4>
+
+                    <div class="property-group">
+                        <label for="slide-type">Slide Type:</label>
+                        <select id="slide-type" disabled>
+                            <option value="title">Title Only</option>
+                            <option value="title-subtitle">Title + Subtitle</option>
+                            <option value="title-content">Title + Content</option>
+                            <option value="content">Content Only</option>
+                        </select>
+                    </div>
+
+                    <div class="property-group" id="title-group">
+                        <label for="slide-title">Title:</label>
+                        <input type="text" id="slide-title" placeholder="Slide title" disabled>
+                    </div>
+
+                    <div class="property-group" id="subtitle-group" style="display: none;">
+                        <label for="slide-subtitle">Subtitle:</label>
+                        <textarea id="slide-subtitle" rows="3" placeholder="Slide subtitle" disabled></textarea>
+                    </div>
+
+                    <div class="property-group" id="content-group">
+                        <label for="slide-content">Content:</label>
+                        <textarea id="slide-content" rows="8" placeholder="Slide content" disabled></textarea>
+                    </div>
+                </div>
+
+                <div id="slide-editor" class="slide-editor">
+                    <div class="empty-state">
+                        <p>Create a new presentation or load an ODP file to get started</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="presentation-editor-embedded.js"></script>
+</body>
+</html>

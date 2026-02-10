@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supertitles Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover:not(:disabled) {
+            background: #218838;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        #set-info {
+            background: #e7f3ff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f8f9fa;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 15px;
+            background: none;
+            border: none;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #6c757d;
+            transition: all 0.3s;
+        }
+
+        .tab:hover {
+            background: #e9ecef;
+        }
+
+        .tab.active {
+            color: #667eea;
+            background: white;
+            border-bottom: 3px solid #667eea;
+        }
+
+        .tab-content {
+            display: none;
+            height: calc(100vh - 260px);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        #presentation-tab {
+            height: 100%;
+        }
+
+        #annotation-tab {
+            height: 100%;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .tabs {
+            flex-shrink: 0;
+        }
+
+        header {
+            flex-shrink: 0;
+        }
+
+        .controls {
+            flex-shrink: 0;
+        }
+
+        .file-info {
+            padding: 15px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 30px;
+            font-size: 14px;
+        }
+
+        .file-info-item {
+            color: #495057;
+        }
+
+        .file-info-item strong {
+            color: #212529;
+        }
+
+        .file-info-item span {
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .empty-state {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #6c757d;
+            font-size: 1.2em;
+            text-align: center;
+            padding: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Supertitles Manager</h1>
+            <p class="subtitle">Manage presentations and PDF annotations together</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <button id="new-set" class="btn btn-secondary">New Set</button>
+                <button id="open-set" class="btn btn-primary">Open Set</button>
+                <input type="file" id="set-input" accept=".supertitles" style="display: none;">
+                <button id="save-set" class="btn btn-success" disabled>Save Set</button>
+            </div>
+
+            <div class="control-group">
+                <button id="change-presentation" class="btn btn-secondary" disabled>Change Presentation</button>
+                <input type="file" id="presentation-input" accept=".json" style="display: none;">
+                <button id="change-annotation" class="btn btn-secondary" disabled>Change Annotation</button>
+                <input type="file" id="annotation-input" accept=".pdf" style="display: none;">
+            </div>
+
+            <div class="control-group">
+                <span id="set-info">No set loaded</span>
+            </div>
+        </div>
+
+        <div class="file-info">
+            <div class="file-info-item">
+                <strong>Presentation:</strong> <span id="presentation-name">None</span>
+            </div>
+            <div class="file-info-item">
+                <strong>Annotation:</strong> <span id="annotation-name">None</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" data-tab="presentation">Presentation Editor</button>
+            <button class="tab" data-tab="annotation">PDF Annotator</button>
+        </div>
+
+        <div id="presentation-tab" class="tab-content active">
+            <iframe id="presentation-frame" src=""></iframe>
+        </div>
+
+        <div id="annotation-tab" class="tab-content">
+            <iframe id="annotation-frame" src=""></iframe>
+        </div>
+    </div>
+
+    <script src="supertitles-manager.js"></script>
+</body>
+</html>
