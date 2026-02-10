@@ -16,7 +16,6 @@ const state = {
     dragOffset: { x: 0, y: 0 },
     wasDragging: false,
     markerSize: 40, // Default marker size in pixels
-    viewMode: 'paginated', // 'paginated' or 'continuous'
     deletedPages: [] // Track deleted page numbers
 };
 
@@ -42,9 +41,6 @@ const canvasWrapper = document.getElementById('canvas-wrapper');
 const markerSizeIncrease = document.getElementById('marker-size-increase');
 const markerSizeDecrease = document.getElementById('marker-size-decrease');
 const markerSizeDisplay = document.getElementById('marker-size-display');
-const toggleViewBtn = document.getElementById('toggle-view');
-const viewModeText = document.getElementById('view-mode-text');
-const continuousCanvasWrapper = document.getElementById('continuous-canvas-wrapper');
 const deletePageBtn = document.getElementById('delete-page');
 
 // Initialize
@@ -66,8 +62,10 @@ function setupEventListeners() {
     canvasWrapper.addEventListener('click', handleCanvasClick);
     markerSizeIncrease.addEventListener('click', () => adjustMarkerSize(5));
     markerSizeDecrease.addEventListener('click', () => adjustMarkerSize(-5));
-    toggleViewBtn.addEventListener('click', toggleViewMode);
     deletePageBtn.addEventListener('click', deleteCurrentPage);
+
+    // Keyboard navigation
+    document.addEventListener('keydown', handleKeyPress);
 
     // Drag and drop for PDF files
     document.body.addEventListener('dragover', (e) => {
@@ -133,7 +131,6 @@ async function loadPdf(file, clearState = true) {
         updateAnnotationsList();
 
         saveAnnotationsBtn.disabled = false;
-        toggleViewBtn.disabled = false;
         deletePageBtn.disabled = false;
 
         // Notify parent after loading
@@ -164,6 +161,27 @@ async function renderPage(pageNum) {
         renderAnnotations();
     } catch (error) {
         console.error('Error rendering page:', error);
+    }
+}
+
+// Keyboard navigation
+function handleKeyPress(e) {
+    // Only handle arrow keys if not typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    switch(e.key) {
+        case 'ArrowLeft':
+        case 'ArrowUp':
+            e.preventDefault();
+            changePage(-1);
+            break;
+        case 'ArrowRight':
+        case 'ArrowDown':
+            e.preventDefault();
+            changePage(1);
+            break;
     }
 }
 
@@ -310,29 +328,6 @@ function adjustMarkerSize(delta) {
     }
 }
 
-// Toggle between paginated and continuous view
-async function toggleViewMode() {
-    if (state.viewMode === 'paginated') {
-        state.viewMode = 'continuous';
-        viewModeText.textContent = 'Paginated View';
-        canvasWrapper.style.display = 'none';
-        continuousCanvasWrapper.style.display = 'flex';
-        prevPageBtn.disabled = true;
-        nextPageBtn.disabled = true;
-        deletePageBtn.disabled = true;
-        const activePages = getActivePages();
-        pageInfo.textContent = `All ${activePages.length} pages`;
-        await renderContinuousView();
-    } else {
-        state.viewMode = 'paginated';
-        viewModeText.textContent = 'Continuous View';
-        canvasWrapper.style.display = 'inline-block';
-        continuousCanvasWrapper.style.display = 'none';
-        updatePageControls();
-        await renderPage(state.currentPage);
-        renderAnnotations();
-    }
-}
 
 // Render all pages in continuous view
 async function renderContinuousView() {
@@ -1067,7 +1062,6 @@ function notifyParent() {
                 annotations: state.annotations,
                 settings: {
                     markerSize: state.markerSize,
-                    viewMode: state.viewMode,
                     zoom: state.scale,
                     deletedPages: Array.isArray(state.deletedPages) ? state.deletedPages : Array.from(state.deletedPages)
                 }
