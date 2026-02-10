@@ -18,8 +18,6 @@ const changePresentationBtn = document.getElementById('change-presentation');
 const changeAnnotationBtn = document.getElementById('change-annotation');
 const presentationInput = document.getElementById('presentation-input');
 const annotationInput = document.getElementById('annotation-input');
-const exportPresentationBtn = document.getElementById('export-presentation');
-const exportPdfBtn = document.getElementById('export-pdf');
 const setInfo = document.getElementById('set-info');
 const presentationNameDisplay = document.getElementById('presentation-name');
 const annotationNameDisplay = document.getElementById('annotation-name');
@@ -44,8 +42,6 @@ function setupEventListeners() {
     presentationInput.addEventListener('change', handlePresentationChange);
     changeAnnotationBtn.addEventListener('click', () => annotationInput.click());
     annotationInput.addEventListener('change', handleAnnotationChange);
-    exportPresentationBtn.addEventListener('click', exportPresentation);
-    exportPdfBtn.addEventListener('click', exportPdf);
 
     tabButtons.forEach(btn => {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
@@ -167,49 +163,97 @@ async function handleSetUpload(e) {
         const text = await file.text();
         const setData = JSON.parse(text);
 
-        if (!setData.version || !setData.presentation || !setData.annotation) {
+        if (!setData.version || !setData.presentation) {
             throw new Error('Invalid supertitles set file format');
         }
 
         state.setName = setData.name || file.name.replace('.supertitles', '');
         state.setFileName = file.name.replace('.supertitles', ''); // Remember filename for auto-save
         state.presentationData = setData.presentation;
-        state.annotationData = setData.annotation;
 
-        // Load metadata if available, otherwise fallback to defaults
-        console.log('Loading set data:', setData);
-        console.log('Metadata:', setData.metadata);
+        // Handle different versions
+        if (setData.version === 1) {
+            // Old format: annotation data embedded
+            if (!setData.annotation) {
+                throw new Error('Invalid supertitles set file format (v1 missing annotation)');
+            }
+            state.annotationData = setData.annotation;
 
-        if (setData.metadata) {
-            state.presentationName = setData.metadata.presentationName || setData.presentation?.presentation?.title || 'Untitled presentation';
-            state.annotationName = setData.metadata.annotationName || (setData.annotation?.pdf ? 'PDF loaded' : 'No PDF');
+            // Load metadata if available
+            if (setData.metadata) {
+                state.presentationName = setData.metadata.presentationName || setData.presentation?.presentation?.title || 'Untitled presentation';
+                state.annotationName = setData.metadata.annotationName || (setData.annotation?.pdf ? 'PDF loaded' : 'No PDF');
+            } else {
+                state.presentationName = setData.presentation?.presentation?.title || 'Untitled presentation';
+                state.annotationName = setData.annotation?.pdf ? 'PDF loaded' : 'No PDF';
+            }
+
+            state.hasUnsavedChanges = false;
+
+            // Send to iframes
+            presentationFrame.contentWindow.postMessage({
+                type: 'load-data',
+                data: state.presentationData
+            }, '*');
+
+            annotationFrame.contentWindow.postMessage({
+                type: 'load-data',
+                data: state.annotationData,
+                metadata: {
+                    fileName: state.annotationName
+                }
+            }, '*');
+
+            enableEditing();
+            updateUI();
+
+            alert('Supertitles set loaded successfully!');
+
+        } else if (setData.version === 2) {
+            // New format: embedded data (self-contained)
+            if (!setData.presentation || !setData.annotation) {
+                throw new Error('Invalid supertitles set file format (v2 missing presentation or annotation)');
+            }
+
+            state.setName = setData.name || file.name.replace('.supertitles', '');
+            state.setFileName = file.name.replace('.supertitles', '');
+            state.presentationData = setData.presentation;
+            state.annotationData = setData.annotation;
+
+            // Load metadata
+            if (setData.metadata) {
+                state.presentationName = setData.metadata.presentationName || setData.presentation?.presentation?.title || 'Untitled presentation';
+                state.annotationName = setData.metadata.annotationName || (setData.annotation?.pdf ? 'PDF loaded' : 'No PDF');
+            } else {
+                state.presentationName = setData.presentation?.presentation?.title || 'Untitled presentation';
+                state.annotationName = setData.annotation?.pdf ? 'PDF loaded' : 'No PDF';
+            }
+
+            state.hasUnsavedChanges = false;
+
+            // Send to iframes
+            presentationFrame.contentWindow.postMessage({
+                type: 'load-data',
+                data: state.presentationData
+            }, '*');
+
+            annotationFrame.contentWindow.postMessage({
+                type: 'load-data',
+                data: state.annotationData,
+                metadata: {
+                    fileName: state.annotationName
+                }
+            }, '*');
+
+            enableEditing();
+            updateUI();
+
+            alert('Supertitles set loaded successfully!');
+
         } else {
-            state.presentationName = setData.presentation?.presentation?.title || 'Untitled presentation';
-            state.annotationName = setData.annotation?.pdf ? 'PDF loaded' : 'No PDF';
+            throw new Error(`Unsupported supertitles set version: ${setData.version}`);
         }
 
-        console.log('Loaded names - Presentation:', state.presentationName, 'Annotation:', state.annotationName);
-
-        state.hasUnsavedChanges = false;
-
-        // Send to iframes
-        presentationFrame.contentWindow.postMessage({
-            type: 'load-data',
-            data: state.presentationData
-        }, '*');
-
-        annotationFrame.contentWindow.postMessage({
-            type: 'load-data',
-            data: state.annotationData,
-            metadata: {
-                fileName: state.annotationName
-            }
-        }, '*');
-
-        enableEditing();
-        updateUI();
-
-        alert('Supertitles set loaded successfully!');
     } catch (error) {
         console.error('Error loading set:', error);
         alert('Error loading supertitles set: ' + error.message);
@@ -235,8 +279,31 @@ function saveSet() {
 
     console.log('Saving set with names:', state.presentationName, state.annotationName);
 
+    // Save presentation file (for individual editing)
+    const presentationFilename = filename + '_presentation.json';
+    const presentationJson = JSON.stringify(state.presentationData, null, 2);
+    const presentationBlob = new Blob([presentationJson], { type: 'application/json' });
+    const presentationUrl = URL.createObjectURL(presentationBlob);
+    const presentationLink = document.createElement('a');
+    presentationLink.href = presentationUrl;
+    presentationLink.download = presentationFilename;
+    presentationLink.click();
+    URL.revokeObjectURL(presentationUrl);
+
+    // Save annotation file (for individual editing)
+    const annotationFilename = filename + '_annotation.pdfannotations';
+    const annotationJson = JSON.stringify(state.annotationData, null, 2);
+    const annotationBlob = new Blob([annotationJson], { type: 'application/json' });
+    const annotationUrl = URL.createObjectURL(annotationBlob);
+    const annotationLink = document.createElement('a');
+    annotationLink.href = annotationUrl;
+    annotationLink.download = annotationFilename;
+    annotationLink.click();
+    URL.revokeObjectURL(annotationUrl);
+
+    // Save supertitles file with ALL data embedded (self-contained)
     const setData = {
-        version: 1,
+        version: 2,
         name: state.setName,
         presentation: state.presentationData,
         annotation: state.annotationData,
@@ -259,10 +326,6 @@ function saveSet() {
 
     state.hasUnsavedChanges = false;
     updateUI();
-
-    // Automatically export presentation HTML and annotated PDF
-    exportPresentation();
-    exportPdf();
 }
 
 // Handle presentation file change
@@ -304,7 +367,7 @@ async function handleAnnotationChange(e) {
 
     try {
         // Check if it's a project file or PDF
-        if (file.name.endsWith('.json')) {
+        if (file.name.endsWith('.pdfannotations') || file.name.endsWith('.json')) {
             const text = await file.text();
             const projectData = JSON.parse(text);
 
@@ -313,7 +376,8 @@ async function handleAnnotationChange(e) {
             }
 
             state.annotationData = projectData;
-            state.annotationName = file.name.replace('.json', '');
+            state.annotationName = file.name.replace('.pdfannotations', '').replace('.json', '');
+            delete state.annotationFileReference; // Clear the reference since we now have the data
         } else if (file.name.endsWith('.pdf')) {
             // Load new PDF - keep existing annotations structure but update PDF
             const arrayBuffer = await file.arrayBuffer();
@@ -401,34 +465,6 @@ function enableEditing() {
     saveSetBtn.disabled = false;
     changePresentationBtn.disabled = false;
     changeAnnotationBtn.disabled = false;
-    exportPresentationBtn.disabled = false;
-    exportPdfBtn.disabled = false;
-}
-
-// Export presentation HTML
-function exportPresentation() {
-    if (!state.presentationData) {
-        alert('No presentation to export');
-        return;
-    }
-
-    // Tell the embedded editor to export
-    presentationFrame.contentWindow.postMessage({
-        type: 'export-html'
-    }, '*');
-}
-
-// Export annotated PDF
-function exportPdf() {
-    if (!state.annotationData || !state.annotationData.pdf) {
-        alert('No PDF to export');
-        return;
-    }
-
-    // Tell the embedded editor to export
-    annotationFrame.contentWindow.postMessage({
-        type: 'export-pdf'
-    }, '*');
 }
 
 // Update UI

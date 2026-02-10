@@ -12,7 +12,6 @@ const newPresentationBtn = document.getElementById('new-presentation');
 const loadOdpBtn = document.getElementById('load-odp');
 const loadProjectBtn = document.getElementById('load-project');
 const saveProjectBtn = document.getElementById('save-project');
-const saveHtmlBtn = document.getElementById('save-html');
 const addSlideBtn = document.getElementById('add-slide');
 const deleteSlideBtn = document.getElementById('delete-slide');
 const slidesList = document.getElementById('slides-list');
@@ -40,7 +39,6 @@ function setupEventListeners() {
     loadProjectBtn.addEventListener('click', () => projectInput.click());
     projectInput.addEventListener('change', handleProjectUpload);
     saveProjectBtn.addEventListener('click', saveAsProject);
-    saveHtmlBtn.addEventListener('click', saveAsHtml);
     addSlideBtn.addEventListener('click', addSlide);
     deleteSlideBtn.addEventListener('click', deleteCurrentSlide);
     slideTypeSelect.addEventListener('change', handleSlideTypeChange);
@@ -601,7 +599,6 @@ function updateUI() {
 // Enable editing
 function enableEditing() {
     saveProjectBtn.disabled = false;
-    saveHtmlBtn.disabled = false;
     addSlideBtn.disabled = false;
     slideTypeSelect.disabled = false;
     slideTitleInput.disabled = false;
@@ -799,9 +796,6 @@ window.addEventListener('message', (event) => {
         if (state.currentSlideIndex >= 0) {
             displaySlide(state.currentSlideIndex);
         }
-    } else if (event.data.type === 'export-html') {
-        // Parent requested export
-        saveAsHtml();
     }
 });
 

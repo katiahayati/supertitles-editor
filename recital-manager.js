@@ -15,6 +15,7 @@ const addSupertitlesBtn = document.getElementById('add-supertitles');
 const supertitlesInput = document.getElementById('supertitles-input');
 const addTitleSlideBtn = document.getElementById('add-title-slide');
 const exportPresentationBtn = document.getElementById('export-presentation');
+const exportPdfBtn = document.getElementById('export-pdf');
 const recitalInfo = document.getElementById('recital-info');
 const recitalList = document.getElementById('recital-list');
 const previewArea = document.getElementById('preview-area');
@@ -34,6 +35,7 @@ function setupEventListeners() {
     supertitlesInput.addEventListener('change', handleSupertitlesUpload);
     addTitleSlideBtn.addEventListener('click', addTitleSlide);
     exportPresentationBtn.addEventListener('click', exportPresentation);
+    exportPdfBtn.addEventListener('click', exportCombinedPdf);
 }
 
 // Create new recital
@@ -90,18 +92,48 @@ async function handleSupertitlesUpload(e) {
             const text = await file.text();
             const supertitlesData = JSON.parse(text);
 
-            if (!supertitlesData.version || !supertitlesData.presentation || !supertitlesData.annotation) {
-                throw new Error('Invalid supertitles set file format');
+            console.log('Loading supertitles file:', file.name);
+            console.log('Version:', supertitlesData.version);
+            console.log('Data:', supertitlesData);
+
+            if (!supertitlesData.version) {
+                throw new Error('Invalid supertitles set file format (missing version)');
             }
 
-            const item = {
-                type: 'supertitles',
-                name: supertitlesData.name || file.name.replace('.supertitles', ''),
-                data: supertitlesData
-            };
+            if (supertitlesData.version === 1) {
+                // Old format: annotation data embedded
+                if (!supertitlesData.presentation || !supertitlesData.annotation) {
+                    throw new Error('Invalid supertitles set file format (v1 missing presentation or annotation)');
+                }
 
-            state.items.push(item);
-            state.hasUnsavedChanges = true;
+                const item = {
+                    type: 'supertitles',
+                    name: supertitlesData.name || file.name.replace('.supertitles', ''),
+                    data: supertitlesData
+                };
+
+                state.items.push(item);
+                state.hasUnsavedChanges = true;
+
+            } else if (supertitlesData.version === 2) {
+                // New format: embedded data (self-contained)
+                if (!supertitlesData.presentation || !supertitlesData.annotation) {
+                    throw new Error('Invalid supertitles set file format (v2 missing presentation or annotation)');
+                }
+
+                const item = {
+                    type: 'supertitles',
+                    name: supertitlesData.name || file.name.replace('.supertitles', ''),
+                    data: supertitlesData
+                };
+
+                state.items.push(item);
+                state.hasUnsavedChanges = true;
+
+            } else {
+                throw new Error(`Unsupported supertitles set version: ${supertitlesData.version}`);
+            }
+
         } catch (error) {
             console.error('Error loading supertitles:', error);
             alert(`Error loading ${file.name}: ${error.message}`);
@@ -488,6 +520,212 @@ function enableEditing() {
     addSupertitlesBtn.disabled = false;
     addTitleSlideBtn.disabled = false;
     exportPresentationBtn.disabled = false;
+    exportPdfBtn.disabled = false;
+}
+
+// Export combined PDF with renumbered annotations
+async function exportCombinedPdf() {
+    if (!state.items.length) {
+        alert('No items in recital to export');
+        return;
+    }
+
+    try {
+        const { PDFDocument, rgb, StandardFonts } = PDFLib;
+
+        // Create a new PDF document
+        const mergedPdf = await PDFDocument.create();
+
+        let slideNumber = 1;
+
+        for (const item of state.items) {
+            if (item.type === 'title-slide') {
+                // Create a title slide page
+                const page = mergedPdf.addPage([612, 792]); // Letter size
+                const { width, height } = page.getSize();
+
+                const titleFont = await mergedPdf.embedFont(StandardFonts.HelveticaBold);
+                const subtitleFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
+                const numberFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
+
+                // Draw title
+                const titleSize = 48;
+                const titleWidth = titleFont.widthOfTextAtSize(item.data.title, titleSize);
+                page.drawText(item.data.title, {
+                    x: (width - titleWidth) / 2,
+                    y: height - 250,
+                    size: titleSize,
+                    font: titleFont,
+                    color: rgb(0, 0, 0)
+                });
+
+                // Draw subtitle if exists
+                if (item.data.subtitle) {
+                    const subtitleSize = 24;
+                    const subtitleWidth = subtitleFont.widthOfTextAtSize(item.data.subtitle, subtitleSize);
+                    page.drawText(item.data.subtitle, {
+                        x: (width - subtitleWidth) / 2,
+                        y: height - 320,
+                        size: subtitleSize,
+                        font: subtitleFont,
+                        color: rgb(0, 0, 0)
+                    });
+                }
+
+                // Draw slide number annotation (centered on page)
+                const markerSize = 40;
+                const markerX = width / 2;
+                const markerY = height / 2;
+
+                // Draw circle
+                page.drawCircle({
+                    x: markerX,
+                    y: markerY,
+                    size: markerSize,
+                    borderColor: rgb(1, 0, 0),
+                    borderWidth: 3,
+                    color: rgb(1, 1, 1),
+                    opacity: 0.8
+                });
+
+                // Draw number
+                const numberText = slideNumber.toString();
+                const numberSize = 24;
+                const numberWidth = numberFont.widthOfTextAtSize(numberText, numberSize);
+                page.drawText(numberText, {
+                    x: markerX - numberWidth / 2,
+                    y: markerY - numberSize / 3,
+                    size: numberSize,
+                    font: numberFont,
+                    color: rgb(0, 0, 0)
+                });
+
+                slideNumber++;
+
+            } else if (item.type === 'supertitles') {
+                // Get the PDF data and annotations
+                const pdfData = item.data.annotation.pdf;
+                const annotations = item.data.annotation.annotations || [];
+                const slides = item.data.presentation.slides || [];
+
+                console.log(`Processing supertitles set: ${item.name}`);
+                console.log(`Annotations count: ${annotations.length}`);
+                console.log(`Slides count: ${slides.length}`);
+                console.log(`Starting slide number: ${slideNumber}`);
+
+                if (!pdfData) {
+                    console.warn(`No PDF data for supertitles set: ${item.name}`);
+                    continue;
+                }
+
+                // Load the source PDF (this should be the ORIGINAL unannotated PDF)
+                const pdfBytes = base64ToArrayBuffer(pdfData);
+                const sourcePdf = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
+                // Sort annotations by position (top to bottom, left to right)
+                const sortedAnnotations = [...annotations].sort((a, b) => {
+                    // Sort by page first
+                    if (a.page !== b.page) return a.page - b.page;
+                    // Then by y (top to bottom - lower y is higher on page)
+                    if (Math.abs(a.y - b.y) > 20) return b.y - a.y; // Inverted because PDF coords
+                    // Then by x (left to right)
+                    return a.x - b.x;
+                });
+
+                // Create a mapping from old annotation IDs to new slide numbers
+                const annotationMap = {};
+                sortedAnnotations.forEach((ann, index) => {
+                    annotationMap[ann.id] = slideNumber + index;
+                });
+
+                // Copy pages and add renumbered annotations
+                const pages = sourcePdf.getPages();
+                const markerSize = item.data.annotation.settings?.markerSize || 40;
+                const deletedPages = item.data.annotation.settings?.deletedPages || [];
+
+                const numberFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
+
+                for (let i = 0; i < pages.length; i++) {
+                    const pageNum = i + 1;
+
+                    // Skip deleted pages
+                    if (deletedPages.includes(pageNum)) continue;
+
+                    // Copy the page
+                    const [copiedPage] = await mergedPdf.copyPages(sourcePdf, [i]);
+                    mergedPdf.addPage(copiedPage);
+
+                    const { width, height } = copiedPage.getSize();
+
+                    // Find annotations for this page
+                    const pageAnnotations = sortedAnnotations.filter(ann => ann.page === pageNum);
+
+                    // Draw renumbered annotations
+                    for (const ann of pageAnnotations) {
+                        const newNumber = annotationMap[ann.id];
+
+                        // Convert from canvas coordinates to PDF coordinates
+                        // Canvas: (0,0) at top-left, y increases downward
+                        // PDF: (0,0) at bottom-left, y increases upward
+                        const pdfX = ann.x;
+                        const pdfY = height - ann.y;
+
+                        // Draw circle
+                        copiedPage.drawCircle({
+                            x: pdfX,
+                            y: pdfY,
+                            size: markerSize,
+                            borderColor: rgb(1, 0, 0),
+                            borderWidth: 3,
+                            color: rgb(1, 1, 1),
+                            opacity: 0.8
+                        });
+
+                        // Draw number
+                        const numberText = newNumber.toString();
+                        const numberSize = markerSize * 0.6;
+                        const numberWidth = numberFont.widthOfTextAtSize(numberText, numberSize);
+                        copiedPage.drawText(numberText, {
+                            x: pdfX - numberWidth / 2,
+                            y: pdfY - numberSize / 3,
+                            size: numberSize,
+                            font: numberFont,
+                            color: rgb(0, 0, 0)
+                        });
+                    }
+                }
+
+                // Increment slide number by the number of slides in this set
+                slideNumber += slides.length;
+            }
+        }
+
+        // Save and download the merged PDF
+        const pdfBytes = await mergedPdf.save();
+        const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = (state.recitalFileName || state.recitalName.replace(/[^a-z0-9]/gi, '_').toLowerCase()) + '_annotated.pdf';
+        a.click();
+        URL.revokeObjectURL(url);
+
+        alert('Combined PDF exported successfully!');
+
+    } catch (error) {
+        console.error('Error exporting PDF:', error);
+        alert('Error exporting PDF: ' + error.message);
+    }
+}
+
+// Helper: Convert base64 to ArrayBuffer
+function base64ToArrayBuffer(base64) {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
 }
 
 // Initialize

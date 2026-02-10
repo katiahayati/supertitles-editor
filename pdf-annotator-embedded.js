@@ -27,7 +27,6 @@ const annotationsLayer = document.getElementById('annotations-layer');
 const pdfUpload = document.getElementById('pdf-upload');
 const annotationsUpload = document.getElementById('annotations-upload');
 const saveAnnotationsBtn = document.getElementById('save-annotations');
-const exportPdfBtn = document.getElementById('export-pdf');
 const prevPageBtn = document.getElementById('prev-page');
 const nextPageBtn = document.getElementById('next-page');
 const pageInfo = document.getElementById('page-info');
@@ -59,7 +58,6 @@ function setupEventListeners() {
     pdfUpload.addEventListener('change', handlePdfUpload);
     annotationsUpload.addEventListener('change', handleAnnotationsUpload);
     saveAnnotationsBtn.addEventListener('click', saveAnnotations);
-    exportPdfBtn.addEventListener('click', exportAnnotatedPdf);
     prevPageBtn.addEventListener('click', () => changePage(-1));
     nextPageBtn.addEventListener('click', () => changePage(1));
     zoomInBtn.addEventListener('click', () => zoom(0.1));
@@ -135,7 +133,6 @@ async function loadPdf(file, clearState = true) {
         updateAnnotationsList();
 
         saveAnnotationsBtn.disabled = false;
-        exportPdfBtn.disabled = false;
         toggleViewBtn.disabled = false;
         deletePageBtn.disabled = false;
 
@@ -921,7 +918,7 @@ async function handleAnnotationsUpload(e) {
 
 // Export PDF with annotations rendered
 async function exportAnnotatedPdf() {
-    if (!state.pdfDoc || !state.originalPdfFile) {
+    if (!state.pdfDoc) {
         alert('Please load a PDF first');
         return;
     }
@@ -941,11 +938,25 @@ async function exportAnnotatedPdf() {
 
         const { PDFDocument, rgb } = PDFLib;
 
-        // Read the original PDF file as ArrayBuffer
-        const arrayBuffer = await state.originalPdfFile.arrayBuffer();
+        // Get the PDF data
+        let arrayBuffer;
+        if (state.originalPdfFile && state.originalPdfFile.arrayBuffer) {
+            // Real file object
+            arrayBuffer = await state.originalPdfFile.arrayBuffer();
+        } else if (state.pdfData) {
+            // Base64 data (when loaded from saved project)
+            const binaryString = atob(state.pdfData);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            arrayBuffer = bytes.buffer;
+        } else {
+            throw new Error('No PDF data available');
+        }
 
         // Load the original PDF
-        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
         const pages = pdfDoc.getPages();
 
         // Add annotations to each page BEFORE removing pages
