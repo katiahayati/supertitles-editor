@@ -226,11 +226,6 @@ function getActivePage(pageNum) {
 
 // Delete current page
 function deleteCurrentPage() {
-    if (state.viewMode === 'continuous') {
-        alert('Please switch to paginated view to delete pages.');
-        return;
-    }
-
     const activePages = getActivePages();
     if (activePages.length <= 1) {
         alert('Cannot delete the last page.');
@@ -286,13 +281,7 @@ function deletePage(pageNum) {
     state.annotations = state.annotations.filter(a => a.page !== pageNum);
 
     // Update display
-    const scrollPos = continuousCanvasWrapper.scrollTop;
-    renderContinuousView().then(() => {
-        continuousCanvasWrapper.scrollTop = scrollPos;
-    });
-
-    const newActivePages = getActivePages();
-    pageInfo.textContent = `All ${newActivePages.length} pages`;
+    renderPage(state.currentPage);
     updateAnnotationsList();
 }
 
@@ -300,143 +289,16 @@ function deletePage(pageNum) {
 function zoom(delta) {
     state.scale = Math.max(0.5, Math.min(3, state.scale + delta));
     zoomLevel.textContent = Math.round(state.scale * 100) + '%';
-    if (state.viewMode === 'paginated') {
-        renderPage(state.currentPage);
-    } else {
-        // Save scroll position before re-rendering
-        const scrollPos = continuousCanvasWrapper.scrollTop;
-        renderContinuousView().then(() => {
-            // Restore scroll position after re-rendering
-            continuousCanvasWrapper.scrollTop = scrollPos;
-        });
-    }
+    renderPage(state.currentPage);
 }
 
 // Adjust marker size
 function adjustMarkerSize(delta) {
     state.markerSize = Math.max(20, Math.min(100, state.markerSize + delta));
     markerSizeDisplay.textContent = state.markerSize + 'px';
-    if (state.viewMode === 'paginated') {
-        renderAnnotations();
-    } else {
-        // Update all existing markers without re-rendering pages
-        const allMarkers = continuousCanvasWrapper.querySelectorAll('.annotation-marker');
-        allMarkers.forEach(marker => {
-            marker.style.width = state.markerSize + 'px';
-            marker.style.height = state.markerSize + 'px';
-        });
-    }
+    renderAnnotations();
 }
 
-
-// Render all pages in continuous view
-async function renderContinuousView() {
-    continuousCanvasWrapper.innerHTML = '';
-
-    const activePages = getActivePages();
-
-    for (let pageNum = 1; pageNum <= state.totalPages; pageNum++) {
-        // Skip deleted pages
-        if (state.deletedPages.includes(pageNum)) {
-            continue;
-        }
-
-        const pageContainer = document.createElement('div');
-        pageContainer.className = 'page-container';
-        pageContainer.dataset.pageNum = pageNum;
-
-        const pageCanvas = document.createElement('canvas');
-        pageCanvas.className = 'page-canvas';
-
-        const pageAnnotationsLayer = document.createElement('div');
-        pageAnnotationsLayer.className = 'page-annotations-layer';
-        pageAnnotationsLayer.dataset.pageNum = pageNum;
-
-        // Add delete button for each page (only if more than 1 page left)
-        if (activePages.length > 1) {
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'page-delete-btn';
-            deleteBtn.textContent = `Delete Page ${getActivePage(pageNum)}`;
-            deleteBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                deletePage(pageNum);
-            });
-            pageContainer.appendChild(deleteBtn);
-        }
-
-        pageContainer.appendChild(pageCanvas);
-        pageContainer.appendChild(pageAnnotationsLayer);
-        continuousCanvasWrapper.appendChild(pageContainer);
-
-        // Render the PDF page
-        const page = await state.pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: state.scale });
-
-        pageCanvas.width = viewport.width;
-        pageCanvas.height = viewport.height;
-        pageAnnotationsLayer.style.width = viewport.width + 'px';
-        pageAnnotationsLayer.style.height = viewport.height + 'px';
-
-        const renderContext = {
-            canvasContext: pageCanvas.getContext('2d'),
-            viewport: viewport
-        };
-
-        await page.render(renderContext).promise;
-
-        // Render annotations for this page
-        const pageAnnotations = state.annotations.filter(a => a.page === pageNum);
-        pageAnnotations.forEach(annotation => {
-            const marker = createAnnotationMarker(annotation, pageCanvas);
-            pageAnnotationsLayer.appendChild(marker);
-        });
-
-        // Add click handler for adding annotations
-        pageContainer.addEventListener('click', (e) => handleContinuousCanvasClick(e, pageNum, pageCanvas));
-    }
-}
-
-// Handle clicks in continuous view
-function handleContinuousCanvasClick(e, pageNum, pageCanvas) {
-    if (!state.pdfDoc) return;
-
-    // Don't add annotation if we just finished dragging
-    if (state.wasDragging) {
-        state.wasDragging = false;
-        return;
-    }
-
-    // Check if click was on the canvas (not on annotation marker)
-    if (e.target.closest('.annotation-marker')) {
-        return;
-    }
-
-    const rect = pageCanvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width;
-    const y = (e.clientY - rect.top) / rect.height;
-
-    const annotationId = `${state.annotationPrefix}-${String(state.annotationCounter).padStart(3, '0')}`;
-
-    const annotation = {
-        id: annotationId,
-        page: pageNum,
-        x: x,
-        y: y
-    };
-
-    state.annotations.push(annotation);
-    state.annotationCounter++;
-    notifyParent();
-
-    // Just add the marker to the specific page without re-rendering everything
-    const pageContainer = pageCanvas.closest('.page-container');
-    const pageAnnotationsLayer = pageContainer.querySelector('.page-annotations-layer');
-    const marker = createAnnotationMarker(annotation, pageCanvas);
-    pageAnnotationsLayer.appendChild(marker);
-
-    updateAnnotationsList();
-    updateNextIdDisplay();
-}
 
 // Handle canvas click to add annotation
 function handleCanvasClick(e) {
