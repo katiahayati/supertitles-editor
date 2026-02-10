@@ -15,15 +15,16 @@
 
         <div class="controls">
             <div class="control-group">
-                <label for="odp-upload" class="btn btn-primary">
-                    Load ODP
-                    <input type="file" id="odp-upload" accept=".odp" style="display: none;">
+                <label for="presentation-upload" class="btn btn-primary">
+                    Load Presentation
+                    <input type="file" id="presentation-upload" accept=".odp,.pptx" style="display: none;">
                 </label>
                 <button id="new-presentation" class="btn btn-secondary">New Presentation</button>
             </div>
 
             <div class="control-group">
-                <button id="save-odp" class="btn btn-success" disabled>Save ODP</button>
+                <button id="save-odp" class="btn btn-success" disabled>Save as ODP</button>
+                <button id="save-pptx" class="btn btn-success" disabled>Save as PPTX</button>
                 <button id="add-slide" class="btn btn-accent" disabled>Add Slide</button>
             </div>
 
@@ -46,7 +47,7 @@
 
                 <div id="slide-editor" class="slide-editor">
                     <div class="empty-state">
-                        <p>Load an ODP file or create a new presentation to get started</p>
+                        <p>Load a presentation (ODP or PPTX) or create a new one to get started</p>
                     </div>
                 </div>
 
