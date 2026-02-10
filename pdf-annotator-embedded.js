@@ -1065,7 +1065,12 @@ function notifyParent() {
                 version: 1,
                 pdf: state.pdfData,
                 annotations: state.annotations,
-                settings: state.settings
+                settings: {
+                    markerSize: state.markerSize,
+                    viewMode: state.viewMode,
+                    zoom: state.scale,
+                    deletedPages: Array.isArray(state.deletedPages) ? state.deletedPages : Array.from(state.deletedPages)
+                }
             },
             fileName: state.originalPdfFile?.name || null
         }, '*');

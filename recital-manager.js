@@ -607,10 +607,12 @@ async function exportCombinedPdf() {
                 const pdfData = item.data.annotation.pdf;
                 const annotations = item.data.annotation.annotations || [];
                 const slides = item.data.presentation.slides || [];
+                const deletedPages = item.data.annotation.settings?.deletedPages || [];
 
                 console.log(`Processing supertitles set: ${item.name}`);
                 console.log(`Annotations count: ${annotations.length}`);
                 console.log(`Slides count: ${slides.length}`);
+                console.log(`Deleted pages:`, deletedPages);
                 console.log(`Starting slide number: ${slideNumber}`);
 
                 if (!pdfData) {
@@ -626,8 +628,10 @@ async function exportCombinedPdf() {
                 const sortedAnnotations = [...annotations].sort((a, b) => {
                     // Sort by page first
                     if (a.page !== b.page) return a.page - b.page;
-                    // Then by y (top to bottom - lower y is higher on page)
-                    if (Math.abs(a.y - b.y) > 20) return b.y - a.y; // Inverted because PDF coords
+                    // Then by y (top to bottom)
+                    // In normalized coords: y=0 is top, y=1 is bottom
+                    // So smaller y value = higher on page
+                    if (Math.abs(a.y - b.y) > 0.02) return a.y - b.y;
                     // Then by x (left to right)
                     return a.x - b.x;
                 });
@@ -641,15 +645,20 @@ async function exportCombinedPdf() {
                 // Copy pages and add renumbered annotations
                 const pages = sourcePdf.getPages();
                 const markerSize = item.data.annotation.settings?.markerSize || 40;
-                const deletedPages = item.data.annotation.settings?.deletedPages || [];
 
                 const numberFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
+
+                // Count non-deleted slides for this set
+                let slidesAddedCount = 0;
 
                 for (let i = 0; i < pages.length; i++) {
                     const pageNum = i + 1;
 
                     // Skip deleted pages
-                    if (deletedPages.includes(pageNum)) continue;
+                    if (deletedPages.includes(pageNum)) {
+                        console.log(`Skipping deleted page ${pageNum}`);
+                        continue;
+                    }
 
                     // Copy the page
                     const [copiedPage] = await mergedPdf.copyPages(sourcePdf, [i]);
@@ -657,18 +666,21 @@ async function exportCombinedPdf() {
 
                     const { width, height } = copiedPage.getSize();
 
-                    // Find annotations for this page
-                    const pageAnnotations = sortedAnnotations.filter(ann => ann.page === pageNum);
+                    // Find annotations for this page (excluding deleted pages)
+                    const pageAnnotations = sortedAnnotations.filter(ann => {
+                        return ann.page === pageNum && !deletedPages.includes(ann.page);
+                    });
 
                     // Draw renumbered annotations
                     for (const ann of pageAnnotations) {
                         const newNumber = annotationMap[ann.id];
 
-                        // Convert from canvas coordinates to PDF coordinates
-                        // Canvas: (0,0) at top-left, y increases downward
+                        // Convert from normalized coordinates (0-1) to PDF coordinates
+                        // Annotations are stored as: x = (clickX - rect.left) / rect.width
+                        // So x,y are in range 0-1
                         // PDF: (0,0) at bottom-left, y increases upward
-                        const pdfX = ann.x;
-                        const pdfY = height - ann.y;
+                        const pdfX = ann.x * width;
+                        const pdfY = height - (ann.y * height);
 
                         // Draw circle
                         copiedPage.drawCircle({
@@ -693,10 +705,12 @@ async function exportCombinedPdf() {
                             color: rgb(0, 0, 0)
                         });
                     }
+
+                    slidesAddedCount++;
                 }
 
-                // Increment slide number by the number of slides in this set
-                slideNumber += slides.length;
+                // Increment slide number by the actual number of pages added (non-deleted)
+                slideNumber += slidesAddedCount;
             }
         }
 
