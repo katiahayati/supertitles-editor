@@ -16,3 +16,15 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Test artifacts
+__tests__/downloads/
+coverage/
+.nyc_output/
+
+# Test fixtures (users need to add their own)
+__tests__/fixtures/test.pdf

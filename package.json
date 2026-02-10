@@ -1,0 +1,23 @@
+{
+  "name": "pdf-annotation-tool",
+  "version": "1.0.0",
+  "description": "PDF slide annotation tool for marking slide transitions",
+  "scripts": {
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
+  },
+  "keywords": [
+    "pdf",
+    "annotation",
+    "slides"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@jest/globals": "^29.7.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "puppeteer": "^21.6.1"
+  }
+}

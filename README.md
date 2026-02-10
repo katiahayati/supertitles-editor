@@ -8,11 +8,14 @@ A web-based tool for annotating PDF files with unique slide IDs. Designed for sl
 - **Click to annotate** - Add unique IDs (e.g., SLIDE-001) by clicking on the PDF
 - **Drag to reposition** - Move annotation markers to precise positions
 - **Right-click to delete** - Remove unwanted annotations
+- **Adjustable marker size** - Change marker size from 20px to 100px
 - **Customizable prefixes** - Change annotation ID format to match your system
 - **Project files** - Save and load projects with embedded PDF and annotations
 - **Export annotated PDF** - Generate a PDF with visual markers (red asterisks) at annotation points
 - **Page navigation** - Navigate through multi-page PDFs with ease
 - **Zoom controls** - Zoom in/out for precise annotation placement
+- **View modes** - Toggle between paginated and continuous view
+- **Page deletion** - Remove unwanted pages from the PDF
 
 ## Usage
 
@@ -45,3 +48,40 @@ Modern browsers with support for:
 - HTML5 Canvas
 - File API
 - Base64 encoding/decoding
+
+## Development
+
+### Running Tests
+
+Install dependencies:
+```bash
+npm install
+```
+
+Run tests:
+```bash
+npm test
+```
+
+Run tests in watch mode:
+```bash
+npm run test:watch
+```
+
+Generate coverage report:
+```bash
+npm run test:coverage
+```
+
+**Note**: Some tests require a test PDF file at `__tests__/fixtures/test.pdf`. Tests will skip PDF-related functionality if this file is not present. See `__tests__/README.md` for more details.
+
+### Test Coverage
+
+The test suite includes:
+- Integration tests for core functionality
+- PDF export tests
+- Project file save/load tests
+- UI interaction tests
+- Edge case handling
+
+Tests use Puppeteer for browser automation and run in headless mode.
