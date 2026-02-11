@@ -256,7 +256,7 @@ function getActivePage(pageNum) {
 }
 
 // Delete current page
-function deleteCurrentPage() {
+async function deleteCurrentPage() {
     const activePages = getActivePages();
     if (activePages.length <= 1) {
         alert('Cannot delete the last page.');
@@ -287,8 +287,9 @@ function deleteCurrentPage() {
         }
     }
 
-    renderPage(state.currentPage);
+    await renderPage(state.currentPage);
     updatePageControls();
+    notifyParent();
 }
 
 // Delete page (for continuous view)
