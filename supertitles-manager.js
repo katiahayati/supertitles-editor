@@ -54,8 +54,8 @@ function setupEventListeners() {
 // Setup iframes with embedded editors
 function setupIframes() {
     // We'll load the editors as separate pages
-    presentationFrame.src = 'presentation-editor-embedded.html';
-    annotationFrame.src = 'pdf-annotator-embedded.html';
+    presentationFrame.src = 'presentation-editor.html';
+    annotationFrame.src = 'pdf-annotator.html';
 }
 
 // Handle messages from iframes
