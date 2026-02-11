@@ -655,14 +655,17 @@ async function handleAnnotationsUpload(e) {
         const data = JSON.parse(text);
 
         // Check if this is a project file with embedded PDF
-        if (data.pdfData && data.annotations && Array.isArray(data.annotations)) {
+        // Support both 'pdf' and 'pdfData' field names
+        const pdfData = data.pdf || data.pdfData;
+        if (pdfData && data.annotations && Array.isArray(data.annotations)) {
             // Restore deleted pages first (before loading PDF)
-            if (data.deletedPages && Array.isArray(data.deletedPages)) {
-                state.deletedPages = data.deletedPages;
+            const deletedPages = data.settings?.deletedPages || data.deletedPages;
+            if (deletedPages && Array.isArray(deletedPages)) {
+                state.deletedPages = deletedPages;
             }
 
             // Load the PDF from the project file (don't clear state)
-            const pdfArrayBuffer = base64ToArrayBuffer(data.pdfData);
+            const pdfArrayBuffer = base64ToArrayBuffer(pdfData);
             const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
             const pdfFile = new File([pdfBlob], data.metadata?.pdfFileName || 'document.pdf', { type: 'application/pdf' });
 
@@ -675,15 +678,17 @@ async function handleAnnotationsUpload(e) {
                 annotationPrefixInput.value = data.annotationPrefix;
             }
 
-            // Restore marker size if saved
-            if (data.markerSize) {
-                state.markerSize = data.markerSize;
+            // Restore marker size if saved (check both locations)
+            const markerSize = data.settings?.markerSize || data.markerSize;
+            if (markerSize) {
+                state.markerSize = markerSize;
                 markerSizeDisplay.textContent = state.markerSize + 'px';
             }
 
-            // Restore zoom scale if saved
-            if (data.scale) {
-                state.scale = data.scale;
+            // Restore zoom scale if saved (check both locations)
+            const zoom = data.settings?.zoom || data.scale;
+            if (zoom) {
+                state.scale = zoom;
                 zoomLevel.textContent = Math.round(state.scale * 100) + '%';
             }
 
