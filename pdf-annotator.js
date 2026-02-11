@@ -457,9 +457,7 @@ function createAnnotationMarker(annotation, targetCanvas = null) {
         };
 
         marker.classList.add('dragging');
-        if (state.viewMode === 'paginated') {
-            canvasWrapper.style.cursor = 'grabbing';
-        }
+        canvasWrapper.style.cursor = 'grabbing';
     });
 
     // Handle right-click for delete
@@ -514,7 +512,6 @@ async function saveAnnotations() {
             annotations: state.annotations,
             markerSize: state.markerSize,
             scale: state.scale,
-            viewMode: state.viewMode,
             deletedPages: state.deletedPages,
             metadata: {
                 totalPages: state.totalPages,
@@ -911,11 +908,6 @@ function applySettings() {
         state.markerSize = state.settings.markerSize;
         document.getElementById('marker-size').value = state.markerSize;
         document.getElementById('marker-size-value').textContent = state.markerSize;
-    }
-    if (state.settings.viewMode) {
-        state.viewMode = state.settings.viewMode;
-        document.getElementById('view-mode').value = state.viewMode;
-        updateViewMode();
     }
     if (state.settings.deletedPages) {
         state.deletedPages = new Set(state.settings.deletedPages);
