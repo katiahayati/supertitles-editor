@@ -212,6 +212,41 @@
             text-align: center;
             padding: 40px;
         }
+
+        /* Annotate mode styles */
+        .annotate-mode .tabs {
+            display: none;
+        }
+
+        .annotate-mode .tab-content {
+            display: none !important;
+        }
+
+        #annotate-view {
+            display: none;
+            flex-direction: column;
+            height: calc(100vh - 260px);
+        }
+
+        .annotate-mode #annotate-view {
+            display: flex;
+        }
+
+        #annotate-presentation {
+            height: 25%;
+            border-bottom: 2px solid #dee2e6;
+        }
+
+        #annotate-annotation {
+            height: 75%;
+        }
+
+        #annotate-presentation iframe,
+        #annotate-annotation iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
     </style>
 </head>
 <body>
@@ -236,6 +271,9 @@
                 <input type="file" id="annotation-input" accept=".pdf,.pdfannotations" style="display: none;">
             </div>
 
+            <div class="control-group">
+                <button id="toggle-mode" class="btn btn-primary" disabled>Annotate Mode</button>
+            </div>
 
             <div class="control-group">
                 <span id="set-info">No set loaded</span>
@@ -262,6 +300,15 @@
 
         <div id="annotation-tab" class="tab-content">
             <iframe id="annotation-frame" src=""></iframe>
+        </div>
+
+        <div id="annotate-view">
+            <div id="annotate-presentation">
+                <iframe id="annotate-presentation-frame" src=""></iframe>
+            </div>
+            <div id="annotate-annotation">
+                <iframe id="annotate-annotation-frame" src=""></iframe>
+            </div>
         </div>
     </div>
 

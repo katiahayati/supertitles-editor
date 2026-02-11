@@ -6,7 +6,8 @@ const state = {
     annotationData: null,
     presentationName: null,
     annotationName: null,
-    hasUnsavedChanges: false
+    hasUnsavedChanges: false,
+    isAnnotateMode: false
 };
 
 // DOM elements
@@ -24,6 +25,9 @@ const annotationNameDisplay = document.getElementById('annotation-name');
 const tabButtons = document.querySelectorAll('.tab');
 const presentationFrame = document.getElementById('presentation-frame');
 const annotationFrame = document.getElementById('annotation-frame');
+const toggleModeBtn = document.getElementById('toggle-mode');
+const annotatePresentationFrame = document.getElementById('annotate-presentation-frame');
+const annotateAnnotationFrame = document.getElementById('annotate-annotation-frame');
 
 // Initialize
 function init() {
@@ -47,6 +51,8 @@ function setupEventListeners() {
         btn.addEventListener('click', () => switchTab(btn.dataset.tab));
     });
 
+    toggleModeBtn.addEventListener('click', toggleMode);
+
     // Listen for changes from iframes
     window.addEventListener('message', handleIframeMessage);
 }
@@ -56,6 +62,8 @@ function setupIframes() {
     // We'll load the editors as separate pages
     presentationFrame.src = 'presentation-editor.html';
     annotationFrame.src = 'pdf-annotator.html';
+    annotatePresentationFrame.src = 'presentation-editor.html';
+    annotateAnnotationFrame.src = 'pdf-annotator.html';
 }
 
 // Handle messages from iframes
@@ -95,6 +103,13 @@ function handleIframeMessage(event) {
                 type: 'load-data',
                 data: state.presentationData
             }, '*');
+            // Also load into annotate view if it's ready
+            if (annotatePresentationFrame.contentWindow) {
+                annotatePresentationFrame.contentWindow.postMessage({
+                    type: 'load-data',
+                    data: state.presentationData
+                }, '*');
+            }
         }
     } else if (event.data.type === 'annotation-ready') {
         // Annotation editor is ready, load data if we have it
@@ -106,6 +121,16 @@ function handleIframeMessage(event) {
                     fileName: state.annotationName
                 }
             }, '*');
+            // Also load into annotate view if it's ready
+            if (annotateAnnotationFrame.contentWindow) {
+                annotateAnnotationFrame.contentWindow.postMessage({
+                    type: 'load-data',
+                    data: state.annotationData,
+                    metadata: {
+                        fileName: state.annotationName
+                    }
+                }, '*');
+            }
         }
     }
 }
@@ -460,11 +485,44 @@ function switchTab(tabName) {
     }
 }
 
+// Toggle between edit mode and annotate mode
+function toggleMode() {
+    state.isAnnotateMode = !state.isAnnotateMode;
+
+    if (state.isAnnotateMode) {
+        // Switch to annotate mode
+        document.body.classList.add('annotate-mode');
+        toggleModeBtn.textContent = 'Edit Mode';
+
+        // Load data into annotate view iframes if we have data
+        if (state.presentationData) {
+            annotatePresentationFrame.contentWindow.postMessage({
+                type: 'load-data',
+                data: state.presentationData
+            }, '*');
+        }
+        if (state.annotationData) {
+            annotateAnnotationFrame.contentWindow.postMessage({
+                type: 'load-data',
+                data: state.annotationData,
+                metadata: {
+                    fileName: state.annotationName
+                }
+            }, '*');
+        }
+    } else {
+        // Switch back to edit mode
+        document.body.classList.remove('annotate-mode');
+        toggleModeBtn.textContent = 'Annotate Mode';
+    }
+}
+
 // Enable editing
 function enableEditing() {
     saveSetBtn.disabled = false;
     changePresentationBtn.disabled = false;
     changeAnnotationBtn.disabled = false;
+    toggleModeBtn.disabled = false;
 }
 
 // Update UI
