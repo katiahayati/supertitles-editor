@@ -302,15 +302,10 @@ function adjustMarkerSize(delta) {
 
 // Handle canvas click to add annotation
 function handleCanvasClick(e) {
-    console.log('Canvas clicked!', { pdfDoc: !!state.pdfDoc, wasDragging: state.wasDragging });
-    if (!state.pdfDoc) {
-        console.log('No PDF loaded');
-        return;
-    }
+    if (!state.pdfDoc) return;
 
     // Don't add annotation if we just finished dragging
     if (state.wasDragging) {
-        console.log('Was dragging, ignoring click');
         state.wasDragging = false;
         return;
     }
