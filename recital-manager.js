@@ -18,6 +18,11 @@ const exportPresentationBtn = document.getElementById('export-presentation');
 const exportPdfBtn = document.getElementById('export-pdf');
 const recitalInfo = document.getElementById('recital-info');
 const recitalList = document.getElementById('recital-list');
+const titleSlideEditor = document.getElementById('title-slide-editor');
+const titleSlideTitleInput = document.getElementById('title-slide-title');
+const titleSlideSubtitleInput = document.getElementById('title-slide-subtitle');
+const confirmTitleSlideBtn = document.getElementById('confirm-title-slide');
+const cancelTitleSlideBtn = document.getElementById('cancel-title-slide');
 
 // Initialize
 function init() {
@@ -32,7 +37,9 @@ function setupEventListeners() {
     saveRecitalBtn.addEventListener('click', saveRecital);
     addSupertitlesBtn.addEventListener('click', () => supertitlesInput.click());
     supertitlesInput.addEventListener('change', handleSupertitlesUpload);
-    addTitleSlideBtn.addEventListener('click', addTitleSlide);
+    addTitleSlideBtn.addEventListener('click', showTitleSlideEditor);
+    confirmTitleSlideBtn.addEventListener('click', confirmAddTitleSlide);
+    cancelTitleSlideBtn.addEventListener('click', hideTitleSlideEditor);
     exportPresentationBtn.addEventListener('click', exportPresentation);
     exportPdfBtn.addEventListener('click', exportCombinedPdf);
 }
@@ -143,12 +150,28 @@ async function handleSupertitlesUpload(e) {
     supertitlesInput.value = '';
 }
 
-// Add title slide
-function addTitleSlide() {
-    const title = prompt('Enter title:');
-    if (!title) return;
+// Show title slide editor
+function showTitleSlideEditor() {
+    titleSlideEditor.style.display = 'block';
+    titleSlideTitleInput.value = '';
+    titleSlideSubtitleInput.value = '';
+    titleSlideTitleInput.focus();
+}
 
-    const subtitle = prompt('Enter subtitle (optional):') || '';
+// Hide title slide editor
+function hideTitleSlideEditor() {
+    titleSlideEditor.style.display = 'none';
+}
+
+// Confirm add title slide
+function confirmAddTitleSlide() {
+    const title = titleSlideTitleInput.value.trim();
+    if (!title) {
+        alert('Please enter a title');
+        return;
+    }
+
+    const subtitle = titleSlideSubtitleInput.value.trim();
 
     const item = {
         type: 'title-slide',
@@ -161,6 +184,7 @@ function addTitleSlide() {
 
     state.items.push(item);
     state.hasUnsavedChanges = true;
+    hideTitleSlideEditor();
     updateUI();
 }
 

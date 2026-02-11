@@ -1,0 +1,55 @@
+/* Shared styles for presentation and recital managers */
+
+.slide-properties {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.slide-properties h4 {
+    margin-bottom: 15px;
+    color: #333;
+}
+
+.property-group {
+    margin-bottom: 15px;
+}
+
+.property-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #555;
+    font-size: 14px;
+}
+
+.property-group input,
+.property-group textarea,
+.property-group select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: inherit;
+    transition: all 0.3s;
+}
+
+.property-group input:focus,
+.property-group textarea:focus,
+.property-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.property-group input:disabled,
+.property-group textarea:disabled,
+.property-group select:disabled {
+    background: #e9ecef;
+    cursor: not-allowed;
+}
+
+.property-group textarea {
+    resize: vertical;
+}
