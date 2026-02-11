@@ -11,6 +11,10 @@ This toolkit provides four integrated applications for managing supertitles:
 - **Supertitles Manager** - Link presentations with annotated PDFs
 - **Recital Manager** - Combine multiple sets into a complete recital
 
+## Demo Video
+
+Here's a [video](https://youtu.be/btKFC8YLiCA) that shows how to use the tool and the philosophy behind it.
+
 ## Quick Start
 
 Simply open any of the HTML files in your web browser:
