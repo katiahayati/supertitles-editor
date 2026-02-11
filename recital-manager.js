@@ -577,20 +577,22 @@ async function exportCombinedPdf() {
                 const markerX = width / 2;
                 const markerY = height / 2;
 
+                // Draw number text first to calculate circle size
+                const numberText = slideNumber.toString();
+                const numberSize = 24;
+                const circleSize = markerSize * 0.7; // Tighter circle
+
                 // Draw circle
                 page.drawCircle({
                     x: markerX,
                     y: markerY,
-                    size: markerSize,
+                    size: circleSize,
                     borderColor: rgb(1, 0, 0),
                     borderWidth: 3,
                     color: rgb(1, 1, 1),
                     opacity: 0.8
                 });
 
-                // Draw number
-                const numberText = slideNumber.toString();
-                const numberSize = 24;
                 const numberWidth = numberFont.widthOfTextAtSize(numberText, numberSize);
                 page.drawText(numberText, {
                     x: markerX - numberWidth / 2,
@@ -682,20 +684,21 @@ async function exportCombinedPdf() {
                         const pdfX = ann.x * width;
                         const pdfY = height - (ann.y * height);
 
-                        // Draw circle
+                        // Draw circle (tighter around the number)
+                        const numberText = newNumber.toString();
+                        const numberSize = markerSize * 0.6;
+                        const circleSize = markerSize * 0.7; // Reduced from full markerSize
+
                         copiedPage.drawCircle({
                             x: pdfX,
                             y: pdfY,
-                            size: markerSize,
+                            size: circleSize,
                             borderColor: rgb(1, 0, 0),
                             borderWidth: 3,
                             color: rgb(1, 1, 1),
                             opacity: 0.8
                         });
 
-                        // Draw number
-                        const numberText = newNumber.toString();
-                        const numberSize = markerSize * 0.6;
                         const numberWidth = numberFont.widthOfTextAtSize(numberText, numberSize);
                         copiedPage.drawText(numberText, {
                             x: pdfX - numberWidth / 2,
