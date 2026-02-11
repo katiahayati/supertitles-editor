@@ -950,6 +950,8 @@ window.addEventListener('message', async (event) => {
             if (metadata && metadata.fileName) {
                 // Create a fake file object to store the name
                 state.originalPdfFile = { name: metadata.fileName };
+                state.fileName = metadata.fileName;
+                updateFileNameDisplay();
             }
         }
 

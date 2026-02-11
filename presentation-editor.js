@@ -27,10 +27,12 @@ const subtitleGroup = document.getElementById('subtitle-group');
 const contentGroup = document.getElementById('content-group');
 const fileNameDisplay = document.getElementById('file-name');
 const unsavedIndicator = document.getElementById('unsaved-indicator');
+const slideProperties = document.querySelector('.slide-properties');
 
 // Initialize
 function init() {
     setupEventListeners();
+    updateUI(); // Initialize UI to show/hide panels based on initial state
 }
 
 // Event listeners
@@ -630,6 +632,18 @@ function updateUI() {
 
     const hasSlides = state.slides.length > 0;
     deleteSlideBtn.disabled = !hasSlides;
+
+    // Show/hide slide properties and editor based on whether slides exist
+    if (hasSlides) {
+        slideProperties.style.display = 'block';
+        if (state.currentSlideIndex >= 0) {
+            displaySlide(state.currentSlideIndex);
+        }
+    } else {
+        slideProperties.style.display = 'none';
+        currentSlideNumber.textContent = '-';
+        slideEditor.innerHTML = '<div class="empty-state"><p>Create a new presentation or load an ODP file to get started</p></div>';
+    }
 }
 
 // Enable editing
@@ -830,9 +844,16 @@ function notifyParent() {
 window.addEventListener('message', (event) => {
     if (event.data.type === 'load-data') {
         const data = event.data.data;
+        const metadata = event.data.metadata;
         state.presentation = data.presentation || { title: 'Presentation' };
         state.slides = data.slides || [];
         state.currentSlideIndex = state.slides.length > 0 ? 0 : -1;
+
+        // Update fileName from metadata if available
+        if (metadata && metadata.fileName) {
+            state.fileName = metadata.fileName;
+            updateFileNameDisplay();
+        }
 
         enableEditing();
         updateUI();

@@ -14,14 +14,14 @@ const state = {
 
 // DOM elements
 const newSetBtn = document.getElementById('new-set');
-const openSetBtn = document.getElementById('open-set');
 const saveSetBtn = document.getElementById('save-set');
 const setInput = document.getElementById('set-input');
 const changePresentationBtn = document.getElementById('change-presentation');
 const changeAnnotationBtn = document.getElementById('change-annotation');
 const presentationInput = document.getElementById('presentation-input');
 const annotationInput = document.getElementById('annotation-input');
-const setInfo = document.getElementById('set-info');
+const fileNameDisplay = document.getElementById('file-name');
+const unsavedIndicator = document.getElementById('unsaved-indicator');
 const presentationNameDisplay = document.getElementById('presentation-name');
 const annotationNameDisplay = document.getElementById('annotation-name');
 const tabButtons = document.querySelectorAll('.tab');
@@ -30,17 +30,20 @@ const annotationFrame = document.getElementById('annotation-frame');
 const toggleModeBtn = document.getElementById('toggle-mode');
 const annotatePresentationFrame = document.getElementById('annotate-presentation-frame');
 const annotateAnnotationFrame = document.getElementById('annotate-annotation-frame');
+const fileInfo = document.getElementById('file-info');
+const tabs = document.getElementById('tabs');
+const emptyState = document.getElementById('empty-state');
 
 // Initialize
 function init() {
     setupEventListeners();
     setupIframes();
+    updateUI(); // Initialize UI to show empty state on load
 }
 
 // Event listeners
 function setupEventListeners() {
     newSetBtn.addEventListener('click', createNewSet);
-    openSetBtn.addEventListener('click', () => setInput.click());
     setInput.addEventListener('change', handleSetUpload);
     saveSetBtn.addEventListener('click', saveSet);
 
@@ -57,6 +60,24 @@ function setupEventListeners() {
 
     // Listen for changes from iframes
     window.addEventListener('message', handleIframeMessage);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (!saveSetBtn.disabled) {
+                saveSet();
+            }
+        }
+    });
+
+    // Warn before closing with unsaved changes
+    window.addEventListener('beforeunload', (e) => {
+        if (state.hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 }
 
 // Setup iframes with embedded editors
@@ -78,7 +99,7 @@ function handleIframeMessage(event) {
         } else if (!state.presentationName && state.presentationData?.presentation?.title) {
             state.presentationName = state.presentationData.presentation.title;
         }
-        state.hasUnsavedChanges = true;
+        markUnsavedChanges();
         updateUI();
     } else if (event.data.type === 'annotation-changed') {
         state.annotationData = event.data.data;
@@ -96,20 +117,26 @@ function handleIframeMessage(event) {
             state.annotationName = 'PDF loaded';
         }
         // If state.annotationName already has a value (like from metadata), keep it
-        state.hasUnsavedChanges = true;
+        markUnsavedChanges();
         updateUI();
     } else if (event.data.type === 'presentation-ready') {
         // Presentation editor is ready, load data if we have it
         if (state.presentationData) {
             presentationFrame.contentWindow.postMessage({
                 type: 'load-data',
-                data: state.presentationData
+                data: state.presentationData,
+                metadata: {
+                    fileName: state.presentationName
+                }
             }, '*');
             // Also load into annotate view if it's ready
             if (annotatePresentationFrame.contentWindow) {
                 annotatePresentationFrame.contentWindow.postMessage({
                     type: 'load-data',
-                    data: state.presentationData
+                    data: state.presentationData,
+                    metadata: {
+                        fileName: state.presentationName
+                    }
                 }, '*');
             }
         }
@@ -175,12 +202,15 @@ function createNewSet() {
             deletedPages: []
         }
     };
-    state.hasUnsavedChanges = false;
+    clearUnsavedChanges();
 
     // Send to iframes
     presentationFrame.contentWindow.postMessage({
         type: 'load-data',
-        data: state.presentationData
+        data: state.presentationData,
+        metadata: {
+            fileName: state.presentationName
+        }
     }, '*');
 
     annotationFrame.contentWindow.postMessage({
@@ -229,12 +259,15 @@ async function handleSetUpload(e) {
                 state.annotationName = setData.annotation?.pdf ? 'PDF loaded' : 'No PDF';
             }
 
-            state.hasUnsavedChanges = false;
+            clearUnsavedChanges();
 
             // Send to iframes
             presentationFrame.contentWindow.postMessage({
                 type: 'load-data',
-                data: state.presentationData
+                data: state.presentationData,
+                metadata: {
+                    fileName: state.presentationName
+                }
             }, '*');
 
             annotationFrame.contentWindow.postMessage({
@@ -248,7 +281,7 @@ async function handleSetUpload(e) {
             enableEditing();
             updateUI();
 
-            alert('Supertitles set loaded successfully!');
+            // Set loaded successfully - no alert needed
 
         } else if (setData.version === 2) {
             // New format: embedded data (self-contained)
@@ -270,12 +303,15 @@ async function handleSetUpload(e) {
                 state.annotationName = setData.annotation?.pdf ? 'PDF loaded' : 'No PDF';
             }
 
-            state.hasUnsavedChanges = false;
+            clearUnsavedChanges();
 
             // Send to iframes
             presentationFrame.contentWindow.postMessage({
                 type: 'load-data',
-                data: state.presentationData
+                data: state.presentationData,
+                metadata: {
+                    fileName: state.presentationName
+                }
             }, '*');
 
             annotationFrame.contentWindow.postMessage({
@@ -289,7 +325,7 @@ async function handleSetUpload(e) {
             enableEditing();
             updateUI();
 
-            alert('Supertitles set loaded successfully!');
+            // Set loaded successfully - no alert needed
 
         } else {
             throw new Error(`Unsupported supertitles set version: ${setData.version}`);
@@ -365,7 +401,7 @@ function saveSet() {
     a.click();
     URL.revokeObjectURL(url);
 
-    state.hasUnsavedChanges = false;
+    clearUnsavedChanges();
     updateUI();
 }
 
@@ -384,15 +420,18 @@ async function handlePresentationChange(e) {
 
         state.presentationData = projectData;
         state.presentationName = projectData.presentation?.title || file.name.replace('.json', '');
-        state.hasUnsavedChanges = true;
+        markUnsavedChanges();
 
         presentationFrame.contentWindow.postMessage({
             type: 'load-data',
-            data: state.presentationData
+            data: state.presentationData,
+            metadata: {
+                fileName: state.presentationName
+            }
         }, '*');
 
         updateUI();
-        alert('Presentation updated!');
+        // Presentation updated - no alert needed
     } catch (error) {
         console.error('Error loading presentation:', error);
         alert('Error loading presentation: ' + error.message);
@@ -448,7 +487,7 @@ async function handleAnnotationChange(e) {
             throw new Error('Please select a PDF file or annotation project JSON file');
         }
 
-        state.hasUnsavedChanges = true;
+        markUnsavedChanges();
 
         annotationFrame.contentWindow.postMessage({
             type: 'load-data',
@@ -459,7 +498,7 @@ async function handleAnnotationChange(e) {
         }, '*');
 
         updateUI();
-        alert('Annotation updated!');
+        // Annotation updated - no alert needed
     } catch (error) {
         console.error('Error loading annotation:', error);
         alert('Error loading annotation: ' + error.message);
@@ -556,15 +595,48 @@ function enableEditing() {
 
 // Update UI
 function updateUI() {
-    if (state.setName) {
-        const unsavedIndicator = state.hasUnsavedChanges ? ' (unsaved changes)' : '';
-        setInfo.textContent = `Set: ${state.setName}${unsavedIndicator}`;
-    } else {
-        setInfo.textContent = 'No set loaded';
-    }
-
+    updateFileNameDisplay();
     presentationNameDisplay.textContent = state.presentationName || 'None';
     annotationNameDisplay.textContent = state.annotationName || 'None';
+
+    // Show/hide empty state based on whether a set is loaded
+    const hasSet = state.setName !== null;
+    if (hasSet) {
+        emptyState.style.display = 'none';
+        fileInfo.style.display = 'flex';
+        tabs.style.display = 'flex';
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = '');
+    } else {
+        emptyState.style.display = 'flex';
+        fileInfo.style.display = 'none';
+        tabs.style.display = 'none';
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+    }
+}
+
+// Unsaved changes tracking
+function markUnsavedChanges() {
+    state.hasUnsavedChanges = true;
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'inline';
+    }
+}
+
+function clearUnsavedChanges() {
+    state.hasUnsavedChanges = false;
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'none';
+    }
+}
+
+function updateFileNameDisplay() {
+    if (fileNameDisplay) {
+        if (state.setName) {
+            fileNameDisplay.textContent = `Set: ${state.setName}`;
+        } else {
+            fileNameDisplay.textContent = 'No set loaded';
+        }
+    }
 }
 
 // Initialize

@@ -8,7 +8,6 @@ const state = {
 
 // DOM elements
 const newRecitalBtn = document.getElementById('new-recital');
-const openRecitalBtn = document.getElementById('open-recital');
 const saveRecitalBtn = document.getElementById('save-recital');
 const recitalInput = document.getElementById('recital-input');
 const addSupertitlesBtn = document.getElementById('add-supertitles');
@@ -16,23 +15,26 @@ const supertitlesInput = document.getElementById('supertitles-input');
 const addTitleSlideBtn = document.getElementById('add-title-slide');
 const exportPresentationBtn = document.getElementById('export-presentation');
 const exportPdfBtn = document.getElementById('export-pdf');
-const recitalInfo = document.getElementById('recital-info');
+const fileNameDisplay = document.getElementById('file-name');
+const unsavedIndicator = document.getElementById('unsaved-indicator');
 const recitalList = document.getElementById('recital-list');
 const titleSlideEditor = document.getElementById('title-slide-editor');
 const titleSlideTitleInput = document.getElementById('title-slide-title');
 const titleSlideSubtitleInput = document.getElementById('title-slide-subtitle');
 const confirmTitleSlideBtn = document.getElementById('confirm-title-slide');
 const cancelTitleSlideBtn = document.getElementById('cancel-title-slide');
+const emptyState = document.getElementById('empty-state');
+const mainContent = document.getElementById('main-content');
 
 // Initialize
 function init() {
     setupEventListeners();
+    updateUI(); // Initialize UI to show empty state on load
 }
 
 // Event listeners
 function setupEventListeners() {
     newRecitalBtn.addEventListener('click', createNewRecital);
-    openRecitalBtn.addEventListener('click', () => recitalInput.click());
     recitalInput.addEventListener('change', handleRecitalUpload);
     saveRecitalBtn.addEventListener('click', saveRecital);
     addSupertitlesBtn.addEventListener('click', () => supertitlesInput.click());
@@ -42,6 +44,24 @@ function setupEventListeners() {
     cancelTitleSlideBtn.addEventListener('click', hideTitleSlideEditor);
     exportPresentationBtn.addEventListener('click', exportPresentation);
     exportPdfBtn.addEventListener('click', exportCombinedPdf);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (!saveRecitalBtn.disabled) {
+                saveRecital();
+            }
+        }
+    });
+
+    // Warn before closing with unsaved changes
+    window.addEventListener('beforeunload', (e) => {
+        if (state.hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 }
 
 // Create new recital
@@ -52,7 +72,7 @@ function createNewRecital() {
     state.recitalName = name;
     state.recitalFileName = null;
     state.items = [];
-    state.hasUnsavedChanges = false;
+    clearUnsavedChanges();
 
     enableEditing();
     updateUI();
@@ -74,12 +94,12 @@ async function handleRecitalUpload(e) {
         state.recitalName = recitalData.name || file.name.replace('.recital', '');
         state.recitalFileName = file.name.replace('.recital', '');
         state.items = recitalData.items;
-        state.hasUnsavedChanges = false;
+        clearUnsavedChanges();
 
         enableEditing();
         updateUI();
 
-        alert('Recital loaded successfully!');
+        // Recital loaded successfully - no alert needed
     } catch (error) {
         console.error('Error loading recital:', error);
         alert('Error loading recital: ' + error.message);
@@ -119,7 +139,7 @@ async function handleSupertitlesUpload(e) {
                 };
 
                 state.items.push(item);
-                state.hasUnsavedChanges = true;
+                markUnsavedChanges();
 
             } else if (supertitlesData.version === 2) {
                 // New format: embedded data (self-contained)
@@ -134,7 +154,7 @@ async function handleSupertitlesUpload(e) {
                 };
 
                 state.items.push(item);
-                state.hasUnsavedChanges = true;
+                markUnsavedChanges();
 
             } else {
                 throw new Error(`Unsupported supertitles set version: ${supertitlesData.version}`);
@@ -217,7 +237,7 @@ function saveRecital() {
     a.click();
     URL.revokeObjectURL(url);
 
-    state.hasUnsavedChanges = false;
+    clearUnsavedChanges();
     updateUI();
 }
 
@@ -418,16 +438,43 @@ function escapeHtml(text) {
 
 // Update UI
 function updateUI() {
-    // Update recital info
-    if (state.recitalName) {
-        const unsavedIndicator = state.hasUnsavedChanges ? ' (unsaved changes)' : '';
-        recitalInfo.textContent = `Recital: ${state.recitalName}${unsavedIndicator}`;
-    } else {
-        recitalInfo.textContent = 'No recital loaded';
-    }
-
-    // Update recital list
+    updateFileNameDisplay();
     updateRecitalList();
+
+    // Show/hide empty state based on whether a recital is loaded
+    const hasRecital = state.recitalName !== null;
+    if (hasRecital) {
+        emptyState.style.display = 'none';
+        mainContent.style.display = 'grid';
+    } else {
+        emptyState.style.display = 'flex';
+        mainContent.style.display = 'none';
+    }
+}
+
+// Unsaved changes tracking
+function markUnsavedChanges() {
+    state.hasUnsavedChanges = true;
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'inline';
+    }
+}
+
+function clearUnsavedChanges() {
+    clearUnsavedChanges();
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'none';
+    }
+}
+
+function updateFileNameDisplay() {
+    if (fileNameDisplay) {
+        if (state.recitalName) {
+            fileNameDisplay.textContent = `Recital: ${state.recitalName}`;
+        } else {
+            fileNameDisplay.textContent = 'No recital loaded';
+        }
+    }
 }
 
 // Update recital list
@@ -517,7 +564,7 @@ function handleDrop(e) {
         // Insert at new position
         state.items.splice(dropIndex, 0, draggedItem);
 
-        state.hasUnsavedChanges = true;
+        markUnsavedChanges();
         updateUI();
     }
 
@@ -533,7 +580,7 @@ function handleDragEnd(e) {
 function removeItem(index) {
     if (confirm('Remove this item from the recital?')) {
         state.items.splice(index, 1);
-        state.hasUnsavedChanges = true;
+        markUnsavedChanges();
         updateUI();
     }
 }

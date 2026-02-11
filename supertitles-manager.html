@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="menubar.css">
     <style>
         * {
             margin: 0;
@@ -30,86 +31,6 @@
             overflow: hidden;
         }
 
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        .controls {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .control-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background: #5568d3;
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
-        #set-info {
-            background: #e7f3ff;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            color: #667eea;
-        }
 
         .tabs {
             display: flex;
@@ -172,13 +93,6 @@
             flex-shrink: 0;
         }
 
-        header {
-            flex-shrink: 0;
-        }
-
-        .controls {
-            flex-shrink: 0;
-        }
 
         .file-info {
             padding: 15px 30px;
@@ -214,7 +128,7 @@
         }
 
         /* Annotate mode styles */
-        .annotate-mode header {
+        .annotate-mode .menubar {
             display: none;
         }
 
@@ -232,24 +146,6 @@
 
         .annotate-mode .container {
             flex-direction: row;
-        }
-
-        .annotate-mode .controls {
-            flex-direction: column;
-            width: 200px;
-            height: 100vh;
-            border-right: 1px solid #dee2e6;
-            border-bottom: none;
-            overflow-y: auto;
-        }
-
-        .annotate-mode .control-group {
-            flex-direction: column;
-            width: 100%;
-        }
-
-        .annotate-mode .control-group .btn {
-            width: 100%;
         }
 
         #annotate-view {
@@ -284,36 +180,45 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Supertitles Manager</h1>
-            <p class="subtitle">Manage presentations and PDF annotations together</p>
-        </header>
-
-        <div class="controls">
-            <div class="control-group">
-                <button id="new-set" class="btn btn-secondary">New Set</button>
-                <button id="open-set" class="btn btn-primary">Open Set</button>
-                <input type="file" id="set-input" accept=".supertitles" style="display: none;">
-                <button id="save-set" class="btn btn-success" disabled>Save Set</button>
+        <div class="menubar">
+            <div class="menu">
+                <button class="menu-title">File</button>
+                <div class="menu-dropdown">
+                    <button id="new-set" class="menu-item">New Set</button>
+                    <label for="set-input" class="menu-item">
+                        <span>Open Set...</span>
+                    </label>
+                    <input type="file" id="set-input" accept=".supertitles" style="display: none;">
+                    <div class="menu-divider"></div>
+                    <button id="save-set" class="menu-item" disabled>
+                        <span>Save Set</span>
+                        <span class="menu-shortcut">Ctrl+S</span>
+                    </button>
+                </div>
             </div>
-
-            <div class="control-group">
-                <button id="change-presentation" class="btn btn-secondary" disabled>Change Presentation</button>
-                <input type="file" id="presentation-input" accept=".json" style="display: none;">
-                <button id="change-annotation" class="btn btn-secondary" disabled>Change Annotation</button>
-                <input type="file" id="annotation-input" accept=".pdf,.pdfannotations" style="display: none;">
+            <div class="menu">
+                <button class="menu-title">Edit</button>
+                <div class="menu-dropdown">
+                    <button id="change-presentation" class="menu-item" disabled>Change Presentation...</button>
+                    <input type="file" id="presentation-input" accept=".json" style="display: none;">
+                    <button id="change-annotation" class="menu-item" disabled>Change Annotation...</button>
+                    <input type="file" id="annotation-input" accept=".pdf,.pdfannotations" style="display: none;">
+                </div>
             </div>
-
-            <div class="control-group">
-                <button id="toggle-mode" class="btn btn-primary" disabled>Annotate Mode</button>
+            <div class="menu">
+                <button class="menu-title">View</button>
+                <div class="menu-dropdown">
+                    <button id="toggle-mode" class="menu-item" disabled>Annotate Mode</button>
+                </div>
             </div>
-
-            <div class="control-group">
-                <span id="set-info">No set loaded</span>
+            <div class="menu-spacer"></div>
+            <div class="menu-info">
+                <span id="file-name">No set loaded</span>
+                <span id="unsaved-indicator" class="unsaved-indicator" style="display: none;">●</span>
             </div>
         </div>
 
-        <div class="file-info">
+        <div class="file-info" id="file-info">
             <div class="file-info-item">
                 <strong>Presentation:</strong> <span id="presentation-name">None</span>
             </div>
@@ -322,9 +227,14 @@
             </div>
         </div>
 
-        <div class="tabs">
+        <div class="tabs" id="tabs">
             <button class="tab active" data-tab="presentation">Presentation Editor</button>
             <button class="tab" data-tab="annotation">PDF Annotator</button>
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display: flex;">
+            <p>Create a new set or open an existing set to get started<br>
+            <span style="font-size: 0.9em; opacity: 0.8;">Use <strong>File → New Set</strong> or <strong>File → Open Set</strong></span></p>
         </div>
 
         <div id="presentation-tab" class="tab-content active">

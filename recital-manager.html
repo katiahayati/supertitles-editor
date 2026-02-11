@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="menubar.css">
     <link rel="stylesheet" href="shared-styles.css">
     <style>
         * {
@@ -31,79 +32,6 @@
             overflow: hidden;
         }
 
-        header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            text-align: center;
-        }
-
-        header h1 {
-            font-size: 2em;
-            margin-bottom: 10px;
-        }
-
-        .controls {
-            padding: 20px 30px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            align-items: center;
-        }
-
-        .control-group {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .btn-primary {
-            background: #667eea;
-            color: white;
-        }
-
-        .btn-primary:hover:not(:disabled) {
-            background: #5568d3;
-            transform: translateY(-2px);
-        }
-
-        .btn-success {
-            background: #28a745;
-            color: white;
-        }
-
-        .btn-success:hover:not(:disabled) {
-            background: #218838;
-            transform: translateY(-2px);
-        }
-
-        .btn-secondary {
-            background: #6c757d;
-            color: white;
-        }
-
-        .btn-secondary:hover:not(:disabled) {
-            background: #5a6268;
-            transform: translateY(-2px);
-        }
-
         .btn-accent {
             background: #ff6b6b;
             color: white;
@@ -112,14 +40,6 @@
         .btn-accent:hover:not(:disabled) {
             background: #ee5a52;
             transform: translateY(-2px);
-        }
-
-        #recital-info {
-            background: #e7f3ff;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-weight: 600;
-            color: #667eea;
         }
 
         .main-content {
@@ -264,36 +184,46 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Recital Manager</h1>
-            <p class="subtitle">Combine multiple supertitle sets with title slides</p>
-        </header>
-
-        <div class="controls">
-            <div class="control-group">
-                <button id="new-recital" class="btn btn-secondary">New Recital</button>
-                <button id="open-recital" class="btn btn-primary">Open Recital</button>
-                <input type="file" id="recital-input" accept=".recital">
-                <button id="save-recital" class="btn btn-success" disabled>Save Recital</button>
+        <div class="menubar">
+            <div class="menu">
+                <button class="menu-title">File</button>
+                <div class="menu-dropdown">
+                    <button id="new-recital" class="menu-item">New Recital</button>
+                    <label for="recital-input" class="menu-item">
+                        <span>Open Recital...</span>
+                    </label>
+                    <input type="file" id="recital-input" accept=".recital" style="display: none;">
+                    <div class="menu-divider"></div>
+                    <button id="save-recital" class="menu-item" disabled>
+                        <span>Save Recital</span>
+                        <span class="menu-shortcut">Ctrl+S</span>
+                    </button>
+                    <div class="menu-divider"></div>
+                    <button id="export-presentation" class="menu-item" disabled>Export Presentation...</button>
+                    <button id="export-pdf" class="menu-item" disabled>Export Combined PDF...</button>
+                </div>
             </div>
-
-            <div class="control-group">
-                <button id="add-supertitles" class="btn btn-primary" disabled>Add Supertitles Set</button>
-                <input type="file" id="supertitles-input" accept=".supertitles" multiple>
-                <button id="add-title-slide" class="btn btn-secondary" disabled>Add Title Slide</button>
+            <div class="menu">
+                <button class="menu-title">Edit</button>
+                <div class="menu-dropdown">
+                    <button id="add-supertitles" class="menu-item" disabled>Add Supertitles Set...</button>
+                    <input type="file" id="supertitles-input" accept=".supertitles" multiple style="display: none;">
+                    <button id="add-title-slide" class="menu-item" disabled>Add Title Slide</button>
+                </div>
             </div>
-
-            <div class="control-group">
-                <button id="export-presentation" class="btn btn-success" disabled>Export Presentation</button>
-                <button id="export-pdf" class="btn btn-success" disabled>Export Combined PDF</button>
-            </div>
-
-            <div class="control-group">
-                <span id="recital-info">No recital loaded</span>
+            <div class="menu-spacer"></div>
+            <div class="menu-info">
+                <span id="file-name">No recital loaded</span>
+                <span id="unsaved-indicator" class="unsaved-indicator" style="display: none;">●</span>
             </div>
         </div>
 
-        <div class="main-content">
+        <div id="empty-state" class="empty-state" style="display: flex;">
+            <p>Create a new recital or open an existing recital to get started<br>
+            <span style="font-size: 0.9em; opacity: 0.8;">Use <strong>File → New Recital</strong> or <strong>File → Open Recital</strong></span></p>
+        </div>
+
+        <div class="main-content" id="main-content">
             <div class="section" id="title-slide-editor" style="display: none;">
                 <h2>Add Title Slide</h2>
                 <div class="slide-properties">
