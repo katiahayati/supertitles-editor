@@ -56,7 +56,7 @@ def group_nearby_positions(positions, distance_threshold=0.05):
     return grouped_positions
 
 def remove_magenta_from_page(page):
-    """Remove magenta/purple colored regions from the page by drawing white rectangles over them."""
+    """Remove magenta/purple colored regions from the page using redaction."""
     # Render page to image
     mat = pymupdf.Matrix(2.0, 2.0)
     pix = page.get_pixmap(matrix=mat)
@@ -88,7 +88,7 @@ def remove_magenta_from_page(page):
     page_width = page_rect.width
     page_height = page_rect.height
 
-    # Draw white rectangles over each magenta region
+    # Add redaction annotations for each magenta region
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
 
@@ -100,9 +100,12 @@ def remove_magenta_from_page(page):
         pdf_x1 = ((x + w) / pix.width) * page_width
         pdf_y1 = page_height - (y / pix.height) * page_height
 
-        # Draw white rectangle
+        # Add redaction annotation
         rect = pymupdf.Rect(pdf_x0, pdf_y0, pdf_x1, pdf_y1)
-        page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1), overlay=True)
+        page.add_redact_annot(rect, fill=(1, 1, 1))
+
+    # Apply all redactions on this page
+    page.apply_redactions()
 
 def find_magenta_numbers(page, page_num):
     """Find magenta regions on a page using image processing."""
@@ -227,16 +230,40 @@ def extract_with_ocr(pdf_path):
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python extract_with_ocr.py <input.pdf> [output.pdfannotations]")
+        print("Usage: python extract_with_ocr.py <annotated.pdf> [clean.pdf] [output.pdfannotations]")
+        print("  annotated.pdf: PDF with magenta annotations to detect")
+        print("  clean.pdf: (optional) Clean PDF to use instead of removing annotations")
+        print("  output.pdfannotations: (optional) Output file name")
         sys.exit(1)
 
-    input_pdf = sys.argv[1]
-    output_file = sys.argv[2] if len(sys.argv) > 2 else input_pdf.replace('.pdf', '.pdfannotations')
+    annotated_pdf = sys.argv[1]
 
-    print(f"Extracting annotations from: {input_pdf}")
+    # Check if second arg is a PDF (clean version) or output file
+    clean_pdf = None
+    output_file = None
+
+    if len(sys.argv) >= 3:
+        if sys.argv[2].endswith('.pdf'):
+            clean_pdf = sys.argv[2]
+            output_file = sys.argv[3] if len(sys.argv) > 3 else annotated_pdf.replace('.pdf', '.pdfannotations')
+        else:
+            output_file = sys.argv[2]
+    else:
+        output_file = annotated_pdf.replace('.pdf', '.pdfannotations')
+
+    print(f"Extracting annotations from: {annotated_pdf}")
+    if clean_pdf:
+        print(f"Using clean PDF: {clean_pdf}")
     print("This may take a while...\n")
 
-    pdf_base64, annotations, settings = extract_with_ocr(input_pdf)
+    pdf_base64, annotations, settings = extract_with_ocr(annotated_pdf)
+
+    # If clean PDF provided, use that instead
+    if clean_pdf:
+        print(f"\nUsing clean PDF instead of removing annotations...")
+        with open(clean_pdf, 'rb') as f:
+            clean_bytes = f.read()
+            pdf_base64 = base64.b64encode(clean_bytes).decode('utf-8')
 
     print(f"\n{'='*60}")
     print(f"Total: {len(annotations)} annotations found")
