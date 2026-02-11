@@ -1,6 +1,13 @@
 # Project files (these are user-generated)
 *-project.json
 *-annotated.pdf
+*.pdfannotations
+*.supertitles
+*.recital
+
+# Test/example files (user-generated)
+*.pdf
+!__tests__/fixtures/test.pdf
 
 # OS files
 .DS_Store
@@ -29,5 +36,3 @@ coverage/
 # Test fixtures (users need to add their own)
 __tests__/fixtures/test.pdf
 venv/
-*.pdfannotations
-old_supers_cleaned.pdfannotations
