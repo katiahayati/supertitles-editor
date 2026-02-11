@@ -13,6 +13,93 @@ import numpy as np
 from PIL import Image
 import io
 
+def group_nearby_positions(positions, distance_threshold=0.05):
+    """Group positions that are close together (part of the same number)."""
+    if not positions:
+        return []
+
+    # Sort by y, then x
+    positions = sorted(positions, key=lambda p: (p['y'], p['x']))
+
+    groups = []
+    current_group = [positions[0]]
+
+    for pos in positions[1:]:
+        # Check if this position is close to any position in the current group
+        min_dist = min(
+            ((pos['x'] - p['x'])**2 + (pos['y'] - p['y'])**2)**0.5
+            for p in current_group
+        )
+
+        if min_dist < distance_threshold:
+            # Add to current group
+            current_group.append(pos)
+        else:
+            # Start new group
+            groups.append(current_group)
+            current_group = [pos]
+
+    # Don't forget the last group
+    groups.append(current_group)
+
+    # Return the center of each group
+    grouped_positions = []
+    for group in groups:
+        avg_x = sum(p['x'] for p in group) / len(group)
+        avg_y = sum(p['y'] for p in group) / len(group)
+        grouped_positions.append({
+            'page': group[0]['page'],
+            'x': avg_x,
+            'y': avg_y
+        })
+
+    return grouped_positions
+
+def remove_magenta_from_page(page):
+    """Remove magenta/purple colored regions from the page."""
+    # Render page to image
+    mat = pymupdf.Matrix(2.0, 2.0)
+    pix = page.get_pixmap(matrix=mat)
+
+    # Convert to numpy array
+    img_data = pix.tobytes("png")
+    img = Image.open(io.BytesIO(img_data))
+    img_array = np.array(img)
+
+    # Convert RGB to HSV
+    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+
+    # Define range for magenta/purple color
+    lower_magenta1 = np.array([140, 50, 50])
+    upper_magenta1 = np.array([170, 255, 255])
+    lower_magenta2 = np.array([290//2, 50, 50])
+    upper_magenta2 = np.array([330//2, 255, 255])
+
+    # Create mask for magenta color
+    mask1 = cv2.inRange(hsv, lower_magenta1, upper_magenta1)
+    mask2 = cv2.inRange(hsv, lower_magenta2, upper_magenta2)
+    mask = cv2.bitwise_or(mask1, mask2)
+
+    # Invert mask to get everything except magenta
+    mask_inv = cv2.bitwise_not(mask)
+
+    # Apply mask to make magenta regions white
+    img_array[mask > 0] = [255, 255, 255]
+
+    # Convert back to PIL image
+    cleaned_img = Image.fromarray(img_array)
+
+    # Convert to bytes
+    img_bytes = io.BytesIO()
+    cleaned_img.save(img_bytes, format='PNG')
+    img_bytes.seek(0)
+
+    # Get page rectangle
+    rect = page.rect
+
+    # Insert the cleaned image
+    page.insert_image(rect, stream=img_bytes.getvalue())
+
 def find_magenta_numbers(page, page_num):
     """Find magenta regions on a page using image processing."""
 
@@ -65,31 +152,46 @@ def find_magenta_numbers(page, page_num):
             "y": y_center
         })
 
-        print(f"  Found magenta region at ({x_center:.3f}, {y_center:.3f})")
-
     return positions
 
 def extract_with_ocr(pdf_path):
-    """Extract annotations using color detection."""
+    """Extract annotations using color detection and remove original numbers."""
     doc = pymupdf.open(pdf_path)
 
     all_positions = []
 
     print(f"Processing {len(doc)} pages...")
 
+    # First pass: detect positions
     for page_num in range(len(doc)):
         print(f"\nPage {page_num + 1}:")
         page = doc[page_num]
 
         positions = find_magenta_numbers(page, page_num)
+        print(f"  Found {len(positions)} raw detections")
         all_positions.extend(positions)
 
+    # Group nearby positions (same page only)
+    print(f"\nGrouping nearby positions...")
+    pages_positions = {}
+    for pos in all_positions:
+        page = pos['page']
+        if page not in pages_positions:
+            pages_positions[page] = []
+        pages_positions[page].append(pos)
+
+    grouped_all = []
+    for page in sorted(pages_positions.keys()):
+        grouped = group_nearby_positions(pages_positions[page])
+        print(f"  Page {page}: {len(pages_positions[page])} detections -> {len(grouped)} groups")
+        grouped_all.extend(grouped)
+
     # Sort by page, then by y position (top to bottom), then by x position (left to right)
-    all_positions.sort(key=lambda a: (a['page'], a['y'], a['x']))
+    grouped_all.sort(key=lambda a: (a['page'], a['y'], a['x']))
 
     # Now assign sequential IDs
     all_annotations = []
-    for i, pos in enumerate(all_positions):
+    for i, pos in enumerate(grouped_all):
         annotation = {
             "id": f"SLIDE-{i+1:03d}",
             "page": pos['page'],
@@ -98,10 +200,16 @@ def extract_with_ocr(pdf_path):
         }
         all_annotations.append(annotation)
 
-    # Read PDF as base64
-    with open(pdf_path, 'rb') as f:
-        pdf_bytes = f.read()
-        pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
+    # Second pass: remove magenta numbers from PDF
+    print(f"\nRemoving original magenta numbers from PDF...")
+    for page_num in range(len(doc)):
+        page = doc[page_num]
+        remove_magenta_from_page(page)
+        print(f"  Cleaned page {page_num + 1}")
+
+    # Save cleaned PDF to bytes
+    pdf_bytes = doc.tobytes()
+    pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
 
     settings = {
         "markerSize": 40,
