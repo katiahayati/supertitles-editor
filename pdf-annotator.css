@@ -337,6 +337,10 @@ body {
     background: #dee2e6;
 }
 
+.toolbar-spacer {
+    flex: 1;
+}
+
 .toolbar-label {
     font-size: 13px;
     color: #6c757d;

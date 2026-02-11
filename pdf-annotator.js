@@ -710,7 +710,7 @@ async function handleAnnotationsUpload(e) {
             notifyParent();
 
             const activePages = getActivePages();
-            alert(`Project loaded successfully! ${state.annotations.length} annotations on ${activePages.length} pages.`);
+            // Project loaded successfully - no alert needed
         }
         // Fallback: old format with just annotations
         else if (data.annotations && Array.isArray(data.annotations)) {
@@ -748,7 +748,7 @@ async function handleAnnotationsUpload(e) {
             updateAnnotationCounter();
 
             const activePages = getActivePages();
-            alert(`Loaded ${state.annotations.length} annotations on ${activePages.length} pages successfully!`);
+            // Annotations loaded successfully - no alert needed
         } else {
             throw new Error('Invalid project file format');
         }
