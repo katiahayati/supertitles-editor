@@ -226,10 +226,37 @@
             display: none !important;
         }
 
+        .annotate-mode .file-info {
+            display: none;
+        }
+
+        .annotate-mode .container {
+            flex-direction: row;
+        }
+
+        .annotate-mode .controls {
+            flex-direction: column;
+            width: 200px;
+            height: 100vh;
+            border-right: 1px solid #dee2e6;
+            border-bottom: none;
+            overflow-y: auto;
+        }
+
+        .annotate-mode .control-group {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .annotate-mode .control-group .btn {
+            width: 100%;
+        }
+
         #annotate-view {
             display: none;
             flex-direction: column;
-            height: calc(100vh - 120px);
+            height: 100vh;
+            flex: 1;
         }
 
         .annotate-mode #annotate-view {

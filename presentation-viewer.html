@@ -18,18 +18,20 @@
             overflow: hidden;
             height: 100vh;
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
         }
 
         .controls {
             padding: 10px;
             background: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
+            border-right: 1px solid #dee2e6;
             display: flex;
+            flex-direction: column;
             gap: 10px;
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            width: 80px;
         }
 
         .btn {
@@ -55,6 +57,10 @@
         .slide-info {
             font-weight: 600;
             color: #495057;
+            font-size: 12px;
+            text-align: center;
+            writing-mode: vertical-rl;
+            transform: rotate(180deg);
         }
 
         .slide-viewer {
