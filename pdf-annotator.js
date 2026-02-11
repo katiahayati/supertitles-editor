@@ -540,7 +540,7 @@ async function saveAnnotations() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName.endsWith('.json') ? fileName : fileName + '.json';
+        a.download = fileName.endsWith('.pdfannotations') ? fileName : fileName + '.pdfannotations';
         a.click();
         URL.revokeObjectURL(url);
 
