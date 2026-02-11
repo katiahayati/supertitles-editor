@@ -505,30 +505,27 @@ async function saveAnnotations() {
     }
 
     try {
-        // Create project data
-        const projectData = {
-            version: '1.0',
-            annotationPrefix: state.annotationPrefix,
+        // Read PDF as base64
+        const pdfArrayBuffer = await state.originalPdfFile.arrayBuffer();
+        const pdfBase64 = arrayBufferToBase64(pdfArrayBuffer);
+
+        // Create project data in the format expected by supertitles manager
+        const projectFile = {
+            version: 1,
+            pdf: pdfBase64,
             annotations: state.annotations,
-            markerSize: state.markerSize,
-            scale: state.scale,
-            deletedPages: state.deletedPages,
+            annotationPrefix: state.annotationPrefix,
+            settings: {
+                markerSize: state.markerSize,
+                zoom: state.scale,
+                deletedPages: state.deletedPages
+            },
             metadata: {
                 totalPages: state.totalPages,
                 pdfFileName: state.originalPdfFile.name,
                 createdAt: new Date().toISOString(),
                 modifiedAt: new Date().toISOString()
             }
-        };
-
-        // Read PDF as base64
-        const pdfArrayBuffer = await state.originalPdfFile.arrayBuffer();
-        const pdfBase64 = arrayBufferToBase64(pdfArrayBuffer);
-
-        // Combine everything into one project file
-        const projectFile = {
-            ...projectData,
-            pdfData: pdfBase64
         };
 
         // Prompt user for filename
