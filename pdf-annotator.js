@@ -905,7 +905,15 @@ async function loadPdfFromBytes(arrayBuffer, pageNumber) {
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     state.pdfDoc = await loadingTask.promise;
     state.totalPages = state.pdfDoc.numPages;
-    state.currentPage = pageNumber !== undefined ? pageNumber : 1;
+
+    // Set current page, but make sure it's not a deleted page
+    let targetPage = pageNumber !== undefined ? pageNumber : 1;
+    if (state.deletedPages.includes(targetPage)) {
+        // If the target page is deleted, go to the first non-deleted page
+        const activePages = getActivePages();
+        targetPage = activePages.length > 0 ? activePages[0] : 1;
+    }
+    state.currentPage = targetPage;
 
     dropZone.classList.add('hidden');
     await renderPage(state.currentPage);
