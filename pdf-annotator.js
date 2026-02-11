@@ -302,10 +302,15 @@ function adjustMarkerSize(delta) {
 
 // Handle canvas click to add annotation
 function handleCanvasClick(e) {
-    if (!state.pdfDoc) return;
+    console.log('Canvas clicked!', { pdfDoc: !!state.pdfDoc, wasDragging: state.wasDragging });
+    if (!state.pdfDoc) {
+        console.log('No PDF loaded');
+        return;
+    }
 
     // Don't add annotation if we just finished dragging
     if (state.wasDragging) {
+        console.log('Was dragging, ignoring click');
         state.wasDragging = false;
         return;
     }
@@ -340,13 +345,7 @@ function handleMouseMove(e) {
     state.wasDragging = true;
 
     // Find the marker element
-    let marker;
-    if (state.viewMode === 'paginated') {
-        marker = annotationsLayer.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
-    } else {
-        marker = continuousCanvasWrapper.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
-    }
-
+    const marker = annotationsLayer.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
     if (!marker) return;
 
     // Get the canvas for this marker's page
@@ -385,21 +384,13 @@ function handleMouseMove(e) {
 function handleMouseUp(e) {
     if (state.dragging) {
         // Find marker in current view
-        let marker;
-        if (state.viewMode === 'paginated') {
-            marker = annotationsLayer.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
-        } else {
-            marker = continuousCanvasWrapper.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
-        }
-
+        const marker = annotationsLayer.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
         if (marker) {
             marker.classList.remove('dragging');
         }
 
         state.dragging = null;
-        if (state.viewMode === 'paginated') {
-            canvasWrapper.style.cursor = 'crosshair';
-        }
+        canvasWrapper.style.cursor = 'crosshair';
 
         // Update the annotations list in case page order changed
         updateAnnotationsList();
@@ -484,15 +475,7 @@ function createAnnotationMarker(annotation, targetCanvas = null) {
 // Delete annotation
 function deleteAnnotation(id) {
     state.annotations = state.annotations.filter(a => a.id !== id);
-    if (state.viewMode === 'paginated') {
-        renderAnnotations();
-    } else {
-        // Just remove the specific marker without re-rendering
-        const marker = continuousCanvasWrapper.querySelector(`[data-annotation-id="${id}"]`);
-        if (marker) {
-            marker.remove();
-        }
-    }
+    renderAnnotations();
     updateAnnotationsList();
     notifyParent();
 }
@@ -695,23 +678,9 @@ async function handleAnnotationsUpload(e) {
                 zoomLevel.textContent = Math.round(state.scale * 100) + '%';
             }
 
-            // Restore view mode if saved
-            if (data.viewMode && data.viewMode === 'continuous') {
-                // Switch to continuous view
-                state.viewMode = 'continuous';
-                viewModeText.textContent = 'Paginated View';
-                canvasWrapper.style.display = 'none';
-                continuousCanvasWrapper.style.display = 'flex';
-                prevPageBtn.disabled = true;
-                nextPageBtn.disabled = true;
-                const activePages = getActivePages();
-                pageInfo.textContent = `All ${activePages.length} pages`;
-                await renderContinuousView();
-            } else {
-                // Default paginated view
-                await renderPage(state.currentPage);
-                renderAnnotations();
-            }
+            // Render paginated view
+            await renderPage(state.currentPage);
+            renderAnnotations();
 
             updateAnnotationCounter();
             updateAnnotationsList();
@@ -751,21 +720,9 @@ async function handleAnnotationsUpload(e) {
                 state.deletedPages = data.deletedPages;
             }
 
-            // Restore view mode if saved
-            if (data.viewMode && data.viewMode === 'continuous') {
-                state.viewMode = 'continuous';
-                viewModeText.textContent = 'Paginated View';
-                canvasWrapper.style.display = 'none';
-                continuousCanvasWrapper.style.display = 'flex';
-                prevPageBtn.disabled = true;
-                nextPageBtn.disabled = true;
-                const activePages = getActivePages();
-                pageInfo.textContent = `All ${activePages.length} pages`;
-                await renderContinuousView();
-            } else {
-                await renderPage(state.currentPage);
-                renderAnnotations();
-            }
+            // Render paginated view
+            await renderPage(state.currentPage);
+            renderAnnotations();
 
             updateAnnotationCounter();
             updateAnnotationsList();
