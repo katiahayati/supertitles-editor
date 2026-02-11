@@ -194,6 +194,9 @@ function showTitleSlideEditor() {
 // Hide title slide editor
 function hideTitleSlideEditor() {
     titleSlideEditor.style.display = 'none';
+    titleSlideTitleInput.value = '';
+    titleSlideSubtitleInput.value = '';
+    delete titleSlideEditor.dataset.editingIndex;
 }
 
 // Confirm add title slide
@@ -206,16 +209,29 @@ function confirmAddTitleSlide() {
 
     const subtitle = titleSlideSubtitleInput.value.trim();
 
-    const item = {
-        type: 'title-slide',
-        name: title,
-        data: {
-            title: title,
-            subtitle: subtitle
-        }
-    };
+    // Check if we're editing an existing slide
+    const editingIndex = titleSlideEditor.dataset.editingIndex;
 
-    state.items.push(item);
+    if (editingIndex !== undefined) {
+        // Update existing title slide
+        const index = parseInt(editingIndex);
+        state.items[index].data.title = title;
+        state.items[index].data.subtitle = subtitle;
+        state.items[index].name = title;
+        delete titleSlideEditor.dataset.editingIndex;
+    } else {
+        // Add new title slide
+        const item = {
+            type: 'title-slide',
+            name: title,
+            data: {
+                title: title,
+                subtitle: subtitle
+            }
+        };
+        state.items.push(item);
+    }
+
     state.hasUnsavedChanges = true;
     hideTitleSlideEditor();
     updateUI();
@@ -494,10 +510,15 @@ function updateRecitalList() {
             details = item.data.subtitle || '(no subtitle)';
         }
 
+        const editButton = item.type === 'title-slide'
+            ? `<button class="btn-small btn-edit" data-index="${index}">Edit</button>`
+            : '';
+
         itemEl.innerHTML = `
             <div class="recital-item-header">
                 <span class="recital-item-type">${typeLabel}</span>
                 <div class="recital-item-actions">
+                    ${editButton}
                     <button class="btn-small btn-remove" data-index="${index}">Remove</button>
                 </div>
             </div>
@@ -510,6 +531,15 @@ function updateRecitalList() {
         itemEl.addEventListener('dragover', handleDragOver);
         itemEl.addEventListener('drop', handleDrop);
         itemEl.addEventListener('dragend', handleDragEnd);
+
+        // Add edit button handler for title slides
+        const editBtn = itemEl.querySelector('.btn-edit');
+        if (editBtn) {
+            editBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                editTitleSlide(index);
+            });
+        }
 
         // Add remove button handler
         const removeBtn = itemEl.querySelector('.btn-remove');
@@ -569,6 +599,22 @@ function removeItem(index) {
         markUnsavedChanges();
         updateUI();
     }
+}
+
+// Edit title slide
+function editTitleSlide(index) {
+    const item = state.items[index];
+    if (item.type !== 'title-slide') return;
+
+    // Pre-fill the editor with existing values
+    titleSlideTitleInput.value = item.data.title;
+    titleSlideSubtitleInput.value = item.data.subtitle || '';
+
+    // Show the editor
+    titleSlideEditor.style.display = 'block';
+
+    // Store the index being edited
+    titleSlideEditor.dataset.editingIndex = index;
 }
 
 // Enable editing
