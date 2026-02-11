@@ -26,6 +26,19 @@ const cancelTitleSlideBtn = document.getElementById('cancel-title-slide');
 const emptyState = document.getElementById('empty-state');
 const mainContent = document.getElementById('main-content');
 
+// Flash message helper
+function showFlashMessage(message, duration = 3000) {
+    const flashEl = document.getElementById('flash-message');
+    if (!flashEl) return;
+
+    flashEl.textContent = message;
+    flashEl.classList.add('show');
+
+    setTimeout(() => {
+        flashEl.classList.remove('show');
+    }, duration);
+}
+
 // Initialize
 function init() {
     setupEventListeners();
@@ -290,7 +303,7 @@ function exportPresentation() {
     a.click();
     URL.revokeObjectURL(url);
 
-    alert('Presentation exported successfully!');
+    showFlashMessage('Presentation exported successfully!');
 }
 
 // Generate Reveal.js HTML
@@ -785,7 +798,7 @@ async function exportCombinedPdf() {
         a.click();
         URL.revokeObjectURL(url);
 
-        alert('Combined PDF exported successfully!');
+        showFlashMessage('Combined PDF exported successfully!');
 
     } catch (error) {
         console.error('Error exporting PDF:', error);

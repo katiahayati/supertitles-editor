@@ -46,6 +46,19 @@ const deletePageBtn = document.getElementById('delete-page');
 const fileNameDisplay = document.getElementById('file-name');
 const unsavedIndicator = document.getElementById('unsaved-indicator');
 
+// Flash message helper
+function showFlashMessage(message, duration = 3000) {
+    const flashEl = document.getElementById('flash-message');
+    if (!flashEl) return;
+
+    flashEl.textContent = message;
+    flashEl.classList.add('show');
+
+    setTimeout(() => {
+        flashEl.classList.remove('show');
+    }, duration);
+}
+
 // Initialize
 function init() {
     setupEventListeners();
@@ -891,7 +904,7 @@ async function exportAnnotatedPdf() {
         a.click();
         URL.revokeObjectURL(url);
 
-        alert('Annotated PDF exported successfully!');
+        showFlashMessage('Annotated PDF exported successfully!');
     } catch (error) {
         console.error('Error exporting PDF:', error);
         alert('Error exporting PDF. Please try again.');

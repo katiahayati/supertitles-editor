@@ -1,5 +1,38 @@
 /* Shared styles for presentation and recital managers */
 
+/* Flash message */
+.flash-message {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #28a745;
+    color: white;
+    padding: 15px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 10000;
+    animation: flashSlideDown 0.3s ease-out;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.flash-message.show {
+    opacity: 1;
+}
+
+@keyframes flashSlideDown {
+    from {
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
 .slide-properties {
     background: #f8f9fa;
     padding: 20px;
