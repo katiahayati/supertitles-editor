@@ -946,24 +946,25 @@ window.addEventListener('message', async (event) => {
             const header = document.querySelector('header');
             if (header) header.style.display = 'none';
 
-            // Allow container to grow to fit content and disable internal scrollbars
+            // Make everything grow naturally and let body handle all scrolling
             const container = document.querySelector('.container');
             if (container) {
                 container.style.height = 'auto';
-                container.style.minHeight = '100vh';
+                container.style.minHeight = '100%';
                 container.style.overflow = 'visible';
             }
 
-            // Disable scrollbars on internal containers - only parent should scroll
             const pdfContainer = document.querySelector('.pdf-container');
             if (pdfContainer) {
                 pdfContainer.style.overflow = 'visible';
+                pdfContainer.style.minHeight = 0;
             }
 
             const pdfContainerDiv = document.querySelector('.pdf-container > div:last-child');
             if (pdfContainerDiv) {
                 pdfContainerDiv.style.overflow = 'visible';
                 pdfContainerDiv.style.height = 'auto';
+                pdfContainerDiv.style.flex = 'none';
             }
 
             const continuousWrapper = document.getElementById('continuous-canvas-wrapper');
@@ -972,9 +973,10 @@ window.addEventListener('message', async (event) => {
                 continuousWrapper.style.overflow = 'visible';
             }
 
-            // Make body scrollable since we're in an iframe
-            document.body.style.overflow = 'visible';
+            // Make body handle all scrolling - parent iframe will show scrollbar
+            document.body.style.overflow = 'auto';
             document.body.style.height = 'auto';
+            document.documentElement.style.overflow = 'auto';
         }
 
         // Apply settings FIRST before loading PDF so zoom is correct
