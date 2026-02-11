@@ -180,6 +180,11 @@ function handleIframeMessage(event) {
 
 // Reset all state and reload iframes
 function resetState() {
+    // Exit annotate mode if active
+    if (document.body.classList.contains('annotate-mode')) {
+        toggleAnnotateMode();
+    }
+
     // Reload iframes to clear all internal state
     presentationFrame.src = presentationFrame.src;
     annotationFrame.src = annotationFrame.src;
