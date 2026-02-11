@@ -714,7 +714,8 @@ async function exportCombinedPdf() {
                 // Copy pages and add renumbered annotations
                 console.log(`\nNumbering annotations starting from ${slideNumber}:`);
                 const pages = sourcePdf.getPages();
-                const markerSize = item.data.annotation.settings?.markerSize || 40;
+                // Use consistent small marker size for all sets
+                const markerSize = 40;
 
                 const numberFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
 
