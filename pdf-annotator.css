@@ -257,6 +257,7 @@ header h1 {
     cursor: pointer;
     font-weight: 600;
     transition: all 0.3s;
+    margin-left: auto;
 }
 
 .btn-delete-page:hover:not(:disabled) {
