@@ -945,6 +945,14 @@ window.addEventListener('message', async (event) => {
             if (controls) controls.style.display = 'none';
             const header = document.querySelector('header');
             if (header) header.style.display = 'none';
+
+            // Allow container to grow to fit content
+            const container = document.querySelector('.container');
+            if (container) {
+                container.style.height = 'auto';
+                container.style.minHeight = '100vh';
+                container.style.overflow = 'visible';
+            }
         }
 
         // Apply settings FIRST before loading PDF so zoom is correct
