@@ -32,10 +32,6 @@ const pageInfo = document.getElementById('page-info');
 const zoomInBtn = document.getElementById('zoom-in');
 const zoomOutBtn = document.getElementById('zoom-out');
 const zoomLevel = document.getElementById('zoom-level');
-const annotationPrefixInput = document.getElementById('annotation-prefix');
-const nextIdDisplay = document.getElementById('next-id-display');
-const annotationsListContent = document.getElementById('annotations-list-content');
-const annotationCount = document.getElementById('annotation-count');
 const dropZone = document.getElementById('drop-zone');
 const canvasWrapper = document.getElementById('canvas-wrapper');
 const markerSizeIncrease = document.getElementById('marker-size-increase');
@@ -46,7 +42,6 @@ const deletePageBtn = document.getElementById('delete-page');
 // Initialize
 function init() {
     setupEventListeners();
-    updateNextIdDisplay();
 }
 
 // Event listeners
@@ -58,7 +53,6 @@ function setupEventListeners() {
     nextPageBtn.addEventListener('click', () => changePage(1));
     zoomInBtn.addEventListener('click', () => zoom(0.1));
     zoomOutBtn.addEventListener('click', () => zoom(-0.1));
-    annotationPrefixInput.addEventListener('input', handlePrefixChange);
     canvasWrapper.addEventListener('click', handleCanvasClick);
     markerSizeIncrease.addEventListener('click', () => adjustMarkerSize(5));
     markerSizeDecrease.addEventListener('click', () => adjustMarkerSize(-5));
@@ -128,7 +122,6 @@ async function loadPdf(file, clearState = true) {
         dropZone.classList.add('hidden');
         await renderPage(state.currentPage);
         updatePageControls();
-        updateAnnotationsList();
 
         saveAnnotationsBtn.disabled = false;
         deletePageBtn.disabled = false;
@@ -285,7 +278,6 @@ function deleteCurrentPage() {
 
     renderPage(state.currentPage);
     updatePageControls();
-    updateAnnotationsList();
 }
 
 // Delete page (for continuous view)
@@ -309,7 +301,6 @@ function deletePage(pageNum) {
 
     // Update display
     renderPage(state.currentPage);
-    updateAnnotationsList();
 }
 
 // Zoom
@@ -355,8 +346,6 @@ function handleCanvasClick(e) {
     notifyParent();
 
     renderAnnotations();
-    updateAnnotationsList();
-    updateNextIdDisplay();
 }
 
 // Handle mouse move for dragging
@@ -408,8 +397,6 @@ function handleMouseUp(e) {
         canvasWrapper.style.cursor = 'crosshair';
 
         // Update the annotations list in case page order changed
-        updateAnnotationsList();
-
         // Reset wasDragging flag after a short delay to allow click event to process
         setTimeout(() => {
             state.wasDragging = false;
@@ -491,59 +478,9 @@ function createAnnotationMarker(annotation, targetCanvas = null) {
 function deleteAnnotation(id) {
     state.annotations = state.annotations.filter(a => a.id !== id);
     renderAnnotations();
-    updateAnnotationsList();
     notifyParent();
 }
 
-// Update annotations list
-function updateAnnotationsList() {
-    annotationsListContent.innerHTML = '';
-    annotationCount.textContent = state.annotations.length;
-
-    // Sort by page, then by ID
-    const sortedAnnotations = [...state.annotations].sort((a, b) => {
-        if (a.page !== b.page) return a.page - b.page;
-        return a.id.localeCompare(b.id);
-    });
-
-    sortedAnnotations.forEach(annotation => {
-        const item = document.createElement('div');
-        item.className = 'annotation-item';
-        item.innerHTML = `
-            <div class="annotation-info">
-                <div class="annotation-id">${annotation.id}</div>
-                <div class="annotation-page">Page ${annotation.page}</div>
-            </div>
-            <button class="annotation-delete" data-id="${annotation.id}">×</button>
-        `;
-
-        item.querySelector('.annotation-info').addEventListener('click', () => {
-            if (state.currentPage !== annotation.page) {
-                state.currentPage = annotation.page;
-                renderPage(state.currentPage);
-                updatePageControls();
-            }
-        });
-
-        item.querySelector('.annotation-delete').addEventListener('click', () => {
-            deleteAnnotation(annotation.id);
-        });
-
-        annotationsListContent.appendChild(item);
-    });
-}
-
-// Handle prefix change
-function handlePrefixChange(e) {
-    state.annotationPrefix = e.target.value || 'SLIDE';
-    updateNextIdDisplay();
-}
-
-// Update next ID display
-function updateNextIdDisplay() {
-    const nextId = `${state.annotationPrefix}-${String(state.annotationCounter).padStart(3, '0')}`;
-    nextIdDisplay.textContent = `Next ID: ${nextId}`;
-}
 
 // Update annotation counter based on existing annotations
 function updateAnnotationCounter() {
@@ -560,7 +497,6 @@ function updateAnnotationCounter() {
 
         state.annotationCounter = numbers.length > 0 ? Math.max(...numbers) + 1 : 1;
     }
-    updateNextIdDisplay();
 }
 
 // Save project file (PDF + annotations bundled together)
@@ -676,7 +612,6 @@ async function handleAnnotationsUpload(e) {
             state.annotations = data.annotations;
             if (data.annotationPrefix) {
                 state.annotationPrefix = data.annotationPrefix;
-                annotationPrefixInput.value = data.annotationPrefix;
             }
 
             // Restore marker size if saved (check both locations)
@@ -698,7 +633,6 @@ async function handleAnnotationsUpload(e) {
             renderAnnotations();
 
             updateAnnotationCounter();
-            updateAnnotationsList();
 
             notifyParent();
 
@@ -715,7 +649,6 @@ async function handleAnnotationsUpload(e) {
             state.annotations = data.annotations;
             if (data.annotationPrefix) {
                 state.annotationPrefix = data.annotationPrefix;
-                annotationPrefixInput.value = data.annotationPrefix;
             }
 
             // Restore marker size if saved
@@ -740,7 +673,6 @@ async function handleAnnotationsUpload(e) {
             renderAnnotations();
 
             updateAnnotationCounter();
-            updateAnnotationsList();
 
             const activePages = getActivePages();
             alert(`Loaded ${state.annotations.length} annotations on ${activePages.length} pages successfully!`);
@@ -964,7 +896,6 @@ async function loadPdfFromBytes(arrayBuffer) {
     dropZone.classList.add('hidden');
     await renderPage(state.currentPage);
     updatePageControls();
-    updateAnnotationsList();
     renderAnnotations();
 
     // Don't notify parent here - this is called when loading FROM parent
