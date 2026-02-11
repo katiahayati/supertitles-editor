@@ -863,6 +863,8 @@ window.addEventListener('message', async (event) => {
         if (hideControls) {
             const controls = document.querySelector('.controls');
             if (controls) controls.style.display = 'none';
+            const header = document.querySelector('header');
+            if (header) header.style.display = 'none';
         }
 
         // Apply settings FIRST before loading PDF so zoom is correct
