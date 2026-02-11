@@ -151,7 +151,7 @@
         #annotate-view {
             display: none;
             flex-direction: column;
-            height: 100vh;
+            height: calc(100vh - 60px);
             flex: 1;
         }
 
@@ -160,21 +160,28 @@
         }
 
         #annotate-presentation {
-            height: 200px;
+            height: 150px;
             border-bottom: 2px solid #dee2e6;
             flex-shrink: 0;
+            overflow: hidden;
         }
 
         #annotate-annotation {
             flex: 1;
             min-height: 0;
-            overflow: auto;
+            overflow-y: auto;
+            position: relative;
         }
 
-        #annotate-presentation iframe,
-        #annotate-annotation iframe {
+        #annotate-presentation iframe {
             width: 100%;
             height: 100%;
+            border: none;
+        }
+
+        #annotate-annotation iframe {
+            width: 100%;
+            min-height: 100%;
             border: none;
         }
     </style>
