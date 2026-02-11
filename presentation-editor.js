@@ -2,15 +2,15 @@
 const state = {
     presentation: { title: 'New Presentation' },
     slides: [],
-    currentSlideIndex: -1
+    currentSlideIndex: -1,
+    fileName: '',
+    hasUnsavedChanges: false
 };
 
 // DOM elements
 const odpInput = document.getElementById('odp-input');
 const projectInput = document.getElementById('project-input');
 const newPresentationBtn = document.getElementById('new-presentation');
-const loadOdpBtn = document.getElementById('load-odp');
-const loadProjectBtn = document.getElementById('load-project');
 const saveProjectBtn = document.getElementById('save-project');
 const addSlideBtn = document.getElementById('add-slide');
 const deleteSlideBtn = document.getElementById('delete-slide');
@@ -25,6 +25,8 @@ const slideContentInput = document.getElementById('slide-content');
 const titleGroup = document.getElementById('title-group');
 const subtitleGroup = document.getElementById('subtitle-group');
 const contentGroup = document.getElementById('content-group');
+const fileNameDisplay = document.getElementById('file-name');
+const unsavedIndicator = document.getElementById('unsaved-indicator');
 
 // Initialize
 function init() {
@@ -34,9 +36,7 @@ function init() {
 // Event listeners
 function setupEventListeners() {
     newPresentationBtn.addEventListener('click', createNewPresentation);
-    loadOdpBtn.addEventListener('click', () => odpInput.click());
     odpInput.addEventListener('change', handleOdpUpload);
-    loadProjectBtn.addEventListener('click', () => projectInput.click());
     projectInput.addEventListener('change', handleProjectUpload);
     saveProjectBtn.addEventListener('click', saveAsProject);
     addSlideBtn.addEventListener('click', addSlide);
@@ -47,6 +47,24 @@ function setupEventListeners() {
     slideTitleInput.addEventListener('input', updateCurrentSlide);
     slideSubtitleInput.addEventListener('input', updateCurrentSlide);
     slideContentInput.addEventListener('input', updateCurrentSlide);
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if (!saveProjectBtn.disabled) {
+                saveAsProject();
+            }
+        }
+    });
+
+    // Warn before closing with unsaved changes
+    window.addEventListener('beforeunload', (e) => {
+        if (state.hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 }
 
 // Create new presentation
@@ -54,6 +72,10 @@ function createNewPresentation() {
     state.presentation = { title: 'New Presentation' };
     state.slides = [];
     state.currentSlideIndex = -1;
+    state.fileName = '';
+
+    updateFileNameDisplay();
+    clearUnsavedChanges();
 
     addSlide();
     enableEditing();
@@ -68,7 +90,10 @@ async function handleOdpUpload(e) {
 
     try {
         await loadOdp(file);
-        alert('ODP loaded successfully!');
+        // ODP loaded successfully - no alert needed
+        state.fileName = file.name;
+        updateFileNameDisplay();
+        clearUnsavedChanges();
     } catch (error) {
         console.error('Error loading ODP:', error);
         alert('Error loading ODP file: ' + error.message);
@@ -332,6 +357,7 @@ function addSlide() {
     state.slides.splice(insertIndex, 0, newSlide);
     state.currentSlideIndex = insertIndex;
 
+    markUnsavedChanges();
     updateUI();
     displaySlide(state.currentSlideIndex);
     notifyParent();
@@ -343,6 +369,7 @@ function deleteCurrentSlide() {
     if (!confirm('Delete this slide?')) return;
 
     state.slides.splice(state.currentSlideIndex, 1);
+    markUnsavedChanges();
 
     if (state.slides.length === 0) {
         state.currentSlideIndex = -1;
@@ -368,6 +395,8 @@ function updateCurrentSlide() {
     slide.title = slideTitleInput.value;
     slide.subtitle = slideSubtitleInput.value;
     slide.content = slideContentInput.value;
+
+    markUnsavedChanges();
 
     // Update preview only (don't call displaySlide to avoid infinite loop)
     updatePreview();
@@ -640,6 +669,10 @@ function saveAsProject() {
     a.download = filename + '.json';
     a.click();
     URL.revokeObjectURL(url);
+
+    state.fileName = filename + '.json';
+    updateFileNameDisplay();
+    clearUnsavedChanges();
 }
 
 // Handle Project file upload
@@ -666,7 +699,10 @@ async function handleProjectUpload(e) {
         }
 
         notifyParent();
-        alert('Project loaded successfully!');
+        // Project loaded successfully - no alert needed
+        state.fileName = file.name;
+        updateFileNameDisplay();
+        clearUnsavedChanges();
     } catch (error) {
         console.error('Error loading project:', error);
         alert('Error loading project file: ' + error.message);
@@ -811,6 +847,27 @@ window.addEventListener('message', (event) => {
         }
     }
 });
+
+// Unsaved changes tracking
+function markUnsavedChanges() {
+    state.hasUnsavedChanges = true;
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'inline';
+    }
+}
+
+function clearUnsavedChanges() {
+    state.hasUnsavedChanges = false;
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'none';
+    }
+}
+
+function updateFileNameDisplay() {
+    if (fileNameDisplay) {
+        fileNameDisplay.textContent = state.fileName || 'No project loaded';
+    }
+}
 
 // Notify parent we're ready
 window.parent.postMessage({ type: 'presentation-ready' }, '*');

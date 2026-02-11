@@ -7,6 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="menubar.css">
     <link rel="stylesheet" href="shared-styles.css">
     <style>
         * {
@@ -290,26 +291,39 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>Presentation Editor</h1>
-            <p class="subtitle">Create presentations from ODP files</p>
-        </header>
-
-        <div class="controls">
-            <div class="control-group">
-                <button id="new-presentation" class="btn btn-secondary">New Presentation</button>
-                <button id="load-odp" class="btn btn-primary">Load ODP</button>
-                <input type="file" id="odp-input" accept=".odp" style="display: none;">
-                <button id="load-project" class="btn btn-primary">Load Project</button>
-                <input type="file" id="project-input" accept=".json" style="display: none;">
+        <div class="menubar">
+            <div class="menu">
+                <button class="menu-title">File</button>
+                <div class="menu-dropdown">
+                    <button id="new-presentation" class="menu-item">New Presentation</button>
+                    <label for="load-odp" class="menu-item">
+                        <span>Import from ODP...</span>
+                        <input type="file" id="odp-input" accept=".odp" style="display: none;">
+                    </label>
+                    <label for="load-project" class="menu-item">
+                        <span>Open Project...</span>
+                        <input type="file" id="project-input" accept=".json" style="display: none;">
+                    </label>
+                    <div class="menu-divider"></div>
+                    <button id="save-project" class="menu-item" disabled>
+                        <span>Save Project</span>
+                        <span class="menu-shortcut">Ctrl+S</span>
+                    </button>
+                </div>
             </div>
-
-            <div class="control-group">
-                <button id="save-project" class="btn btn-success" disabled>Save Project</button>
-                <button id="add-slide" class="btn btn-accent" disabled>Add Slide</button>
+            <div class="menu">
+                <button class="menu-title">Edit</button>
+                <div class="menu-dropdown">
+                    <button id="add-slide" class="menu-item" disabled>Add Slide</button>
+                    <button id="delete-slide" class="menu-item" disabled>Delete Slide</button>
+                </div>
             </div>
-
-            <div class="control-group">
+            <div class="menu-spacer"></div>
+            <div class="menu-info">
+                <span id="file-name">No project loaded</span>
+                <span id="unsaved-indicator" class="unsaved-indicator" style="display: none;">●</span>
+            </div>
+            <div class="menu-info">
                 <span id="slide-counter">0 slides</span>
             </div>
         </div>
@@ -323,7 +337,6 @@
             <div class="editor-panel">
                 <div class="editor-header">
                     <h3>Slide <span id="current-slide-number">-</span></h3>
-                    <button id="delete-slide" class="btn-delete" disabled>Delete Slide</button>
                 </div>
 
                 <div class="slide-properties">
