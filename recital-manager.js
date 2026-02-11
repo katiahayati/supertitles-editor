@@ -663,9 +663,15 @@ async function exportCombinedPdf() {
                 });
 
                 // Create a mapping from old annotation IDs to new slide numbers
+                // We need to number them sequentially across all pages
                 const annotationMap = {};
-                sortedAnnotations.forEach((ann, index) => {
-                    annotationMap[ann.id] = slideNumber + index;
+                let currentNumber = slideNumber;
+                sortedAnnotations.forEach((ann) => {
+                    // Skip annotations on deleted pages
+                    if (!deletedPages.includes(ann.page)) {
+                        annotationMap[ann.id] = currentNumber;
+                        currentNumber++;
+                    }
                 });
 
                 // Copy pages and add renumbered annotations
