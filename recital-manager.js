@@ -342,16 +342,10 @@ function generateRevealJsHtml(slides) {
                 return `${cssKey}: ${v}`;
             }).join('; ');
 
-            const contentHtml = slide.content.split('\n').map(line => {
-                line = line.trim();
-                if (!line) return '';
-                return `<p>${escapeHtml(line)}</p>`;
-            }).join('\n');
-
             return `
                 <section>
                     <h2 style="${titleCss}">${escapeHtml(slide.title)}</h2>
-                    <div style="${contentCss}">${contentHtml}</div>
+                    <p style="${contentCss}; white-space: pre-wrap;">${escapeHtml(slide.content)}</p>
                 </section>`;
         } else if (slide.type === 'content') {
             const contentStyle = slide.styles?.content || {};
@@ -361,15 +355,9 @@ function generateRevealJsHtml(slides) {
                 return `${cssKey}: ${v}`;
             }).join('; ');
 
-            const contentHtml = slide.content.split('\n').map(line => {
-                line = line.trim();
-                if (!line) return '';
-                return `<p>${escapeHtml(line)}</p>`;
-            }).join('\n');
-
             return `
                 <section>
-                    <div style="${contentCss}">${contentHtml}</div>
+                    <p style="${contentCss}; white-space: pre-wrap;">${escapeHtml(slide.content)}</p>
                 </section>`;
         }
     }).join('\n');
