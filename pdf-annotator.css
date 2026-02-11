@@ -219,6 +219,13 @@ header h1 {
     font-size: 18px;
 }
 
+.marker-size-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 20px;
+}
+
 .btn-view-toggle {
     margin-left: 20px;
     padding: 8px 16px;
