@@ -56,7 +56,7 @@ def group_nearby_positions(positions, distance_threshold=0.05):
     return grouped_positions
 
 def remove_magenta_from_page(page):
-    """Remove magenta/purple colored regions from the page."""
+    """Remove magenta/purple colored regions from the page by drawing white rectangles over them."""
     # Render page to image
     mat = pymupdf.Matrix(2.0, 2.0)
     pix = page.get_pixmap(matrix=mat)
@@ -80,25 +80,29 @@ def remove_magenta_from_page(page):
     mask2 = cv2.inRange(hsv, lower_magenta2, upper_magenta2)
     mask = cv2.bitwise_or(mask1, mask2)
 
-    # Invert mask to get everything except magenta
-    mask_inv = cv2.bitwise_not(mask)
+    # Find contours of magenta regions
+    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Apply mask to make magenta regions white
-    img_array[mask > 0] = [255, 255, 255]
+    # Get page dimensions
+    page_rect = page.rect
+    page_width = page_rect.width
+    page_height = page_rect.height
 
-    # Convert back to PIL image
-    cleaned_img = Image.fromarray(img_array)
+    # Draw white rectangles over each magenta region
+    for contour in contours:
+        x, y, w, h = cv2.boundingRect(contour)
 
-    # Convert to bytes
-    img_bytes = io.BytesIO()
-    cleaned_img.save(img_bytes, format='PNG')
-    img_bytes.seek(0)
+        # Convert from image coordinates (2x scaled) to PDF coordinates
+        # Image: (0,0) at top-left, y increases downward
+        # PDF: (0,0) at bottom-left, y increases upward
+        pdf_x0 = (x / pix.width) * page_width
+        pdf_y0 = page_height - ((y + h) / pix.height) * page_height
+        pdf_x1 = ((x + w) / pix.width) * page_width
+        pdf_y1 = page_height - (y / pix.height) * page_height
 
-    # Get page rectangle
-    rect = page.rect
-
-    # Insert the cleaned image
-    page.insert_image(rect, stream=img_bytes.getvalue())
+        # Draw white rectangle
+        rect = pymupdf.Rect(pdf_x0, pdf_y0, pdf_x1, pdf_y1)
+        page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1), overlay=True)
 
 def find_magenta_numbers(page, page_num):
     """Find magenta regions on a page using image processing."""
