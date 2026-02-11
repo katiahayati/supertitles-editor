@@ -671,6 +671,9 @@ async function handleAnnotationsUpload(e) {
 
             await loadPdf(pdfFile, false);
 
+            // Hide drop zone
+            dropZone.classList.add('hidden');
+
             // Load the annotations
             state.annotations = data.annotations;
             if (data.annotationPrefix) {
