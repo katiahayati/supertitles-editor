@@ -446,7 +446,7 @@ function markUnsavedChanges() {
 }
 
 function clearUnsavedChanges() {
-    clearUnsavedChanges();
+    state.hasUnsavedChanges = false;
     if (unsavedIndicator) {
         unsavedIndicator.style.display = 'none';
     }
