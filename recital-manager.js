@@ -18,7 +18,6 @@ const exportPresentationBtn = document.getElementById('export-presentation');
 const exportPdfBtn = document.getElementById('export-pdf');
 const recitalInfo = document.getElementById('recital-info');
 const recitalList = document.getElementById('recital-list');
-const previewArea = document.getElementById('preview-area');
 
 // Initialize
 function init() {
