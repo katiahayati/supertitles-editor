@@ -296,8 +296,6 @@ function exportPresentation() {
 // Generate Reveal.js HTML
 function generateRevealJsHtml(slides) {
     const slideHtmls = slides.map(slide => {
-        const slideNumber = `<div class="slide-number-display">${slide.number}</div>`;
-
         if (slide.type === 'title' || slide.type === 'title-subtitle') {
             const titleStyle = slide.styles?.title || {};
             const subtitleStyle = slide.styles?.subtitle || {};
@@ -314,7 +312,6 @@ function generateRevealJsHtml(slides) {
 
             return `
                 <section>
-                    ${slideNumber}
                     <h1 style="${titleCss}">${escapeHtml(slide.title)}</h1>
                     ${slide.subtitle ? `<h2 style="${subtitleCss}">${escapeHtml(slide.subtitle)}</h2>` : ''}
                 </section>`;
@@ -340,7 +337,6 @@ function generateRevealJsHtml(slides) {
 
             return `
                 <section>
-                    ${slideNumber}
                     <h2 style="${titleCss}">${escapeHtml(slide.title)}</h2>
                     <div style="${contentCss}">${contentHtml}</div>
                 </section>`;
@@ -360,7 +356,6 @@ function generateRevealJsHtml(slides) {
 
             return `
                 <section>
-                    ${slideNumber}
                     <div style="${contentCss}">${contentHtml}</div>
                 </section>`;
         }
@@ -396,16 +391,6 @@ function generateRevealJsHtml(slides) {
             color: #000;
             padding-bottom: 100px;
         }
-        .slide-number-display {
-            position: absolute;
-            bottom: 10px;
-            right: 15px;
-            font-size: 0.8em;
-            font-weight: normal;
-            color: rgba(0, 0, 0, 0.25);
-            font-family: 'Roboto', sans-serif;
-            z-index: 1000;
-        }
     </style>
 </head>
 <body>
@@ -418,7 +403,7 @@ ${slideHtmls}
     <script>
         Reveal.initialize({
             hash: true,
-            slideNumber: false,
+            slideNumber: 'c/t',
             controls: true,
             progress: true,
             center: true,
