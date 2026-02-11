@@ -414,6 +414,14 @@ function displaySlide(index) {
     updatePreview();
     currentSlideNumber.textContent = index + 1;
 
+    // Notify parent of slide change
+    if (window.parent !== window) {
+        window.parent.postMessage({
+            type: 'slide-changed',
+            slideIndex: index
+        }, '*');
+    }
+
     updateSlidesList();
 }
 
@@ -794,6 +802,11 @@ window.addEventListener('message', (event) => {
         enableEditing();
         updateUI();
         if (state.currentSlideIndex >= 0) {
+            displaySlide(state.currentSlideIndex);
+        }
+    } else if (event.data.type === 'goto-slide') {
+        if (event.data.slideIndex !== undefined && event.data.slideIndex >= 0 && event.data.slideIndex < state.slides.length) {
+            state.currentSlideIndex = event.data.slideIndex;
             displaySlide(state.currentSlideIndex);
         }
     }

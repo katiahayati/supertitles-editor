@@ -215,6 +215,17 @@ async function changePage(delta) {
         state.currentPage = activePages[newIndex];
         await renderPage(state.currentPage);
         updatePageControls();
+        notifyPageChange();
+    }
+}
+
+// Notify parent of page change
+function notifyPageChange() {
+    if (window.parent !== window) {
+        window.parent.postMessage({
+            type: 'page-changed',
+            pageNumber: state.currentPage
+        }, '*');
     }
 }
 
@@ -844,12 +855,13 @@ window.addEventListener('message', async (event) => {
     if (event.data.type === 'load-data') {
         const data = event.data.data;
         const metadata = event.data.metadata;
+        const pageNumber = event.data.pageNumber;
 
         if (data.pdf) {
             // Load PDF from base64
             state.pdfData = data.pdf;
             const pdfBytes = base64ToArrayBuffer(data.pdf);
-            await loadPdfFromBytes(pdfBytes);
+            await loadPdfFromBytes(pdfBytes, pageNumber);
 
             // Store filename from metadata if available
             if (metadata && metadata.fileName) {
@@ -867,6 +879,12 @@ window.addEventListener('message', async (event) => {
             state.settings = { ...state.settings, ...data.settings };
             applySettings();
         }
+    } else if (event.data.type === 'goto-page') {
+        if (event.data.pageNumber !== undefined && event.data.pageNumber >= 1 && event.data.pageNumber <= state.totalPages) {
+            state.currentPage = event.data.pageNumber;
+            await renderPage(state.currentPage);
+            updatePageControls();
+        }
     }
 });
 
@@ -881,11 +899,11 @@ function base64ToArrayBuffer(base64) {
 }
 
 // Load PDF from bytes
-async function loadPdfFromBytes(arrayBuffer) {
+async function loadPdfFromBytes(arrayBuffer, pageNumber) {
     const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
     state.pdfDoc = await loadingTask.promise;
     state.totalPages = state.pdfDoc.numPages;
-    state.currentPage = 1;
+    state.currentPage = pageNumber !== undefined ? pageNumber : 1;
 
     dropZone.classList.add('hidden');
     await renderPage(state.currentPage);

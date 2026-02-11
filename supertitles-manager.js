@@ -7,7 +7,9 @@ const state = {
     presentationName: null,
     annotationName: null,
     hasUnsavedChanges: false,
-    isAnnotateMode: false
+    isAnnotateMode: false,
+    currentSlide: 0,
+    currentPage: 1
 };
 
 // DOM elements
@@ -140,6 +142,12 @@ function handleIframeMessage(event) {
                 data: state.presentationData
             }, '*');
         }
+    } else if (event.data.type === 'slide-changed') {
+        // Track current slide for mode switching
+        state.currentSlide = event.data.slideIndex;
+    } else if (event.data.type === 'page-changed') {
+        // Track current page for mode switching
+        state.currentPage = event.data.pageNumber;
     }
 }
 
@@ -506,22 +514,34 @@ function toggleMode() {
         if (state.presentationData) {
             annotatePresentationFrame.contentWindow.postMessage({
                 type: 'load-data',
-                data: state.presentationData
+                data: state.presentationData,
+                slideIndex: state.currentSlide
             }, '*');
         }
         if (state.annotationData) {
             annotateAnnotationFrame.contentWindow.postMessage({
                 type: 'load-data',
                 data: state.annotationData,
+                pageNumber: state.currentPage,
                 metadata: {
                     fileName: state.annotationName
                 }
             }, '*');
         }
     } else {
-        // Switch back to edit mode
+        // Switch back to edit mode - restore position in editors
         document.body.classList.remove('annotate-mode');
         toggleModeBtn.textContent = 'Annotate Mode';
+
+        // Tell the editors to go to the current slide/page
+        presentationFrame.contentWindow.postMessage({
+            type: 'goto-slide',
+            slideIndex: state.currentSlide
+        }, '*');
+        annotationFrame.contentWindow.postMessage({
+            type: 'goto-page',
+            pageNumber: state.currentPage
+        }, '*');
     }
 }
 

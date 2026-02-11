@@ -37,14 +37,20 @@ function setupEventListeners() {
 // Handle messages from parent
 function handleMessage(event) {
     if (event.data.type === 'load-data') {
-        loadPresentation(event.data.data);
+        loadPresentation(event.data.data, event.data.slideIndex);
+    } else if (event.data.type === 'goto-slide') {
+        if (event.data.slideIndex !== undefined) {
+            state.currentSlide = event.data.slideIndex;
+            renderSlide();
+            updateControls();
+        }
     }
 }
 
 // Load presentation data
-function loadPresentation(data) {
+function loadPresentation(data, slideIndex) {
     state.presentation = data;
-    state.currentSlide = 0;
+    state.currentSlide = slideIndex !== undefined ? slideIndex : 0;
     renderSlide();
     updateControls();
 }
@@ -58,6 +64,17 @@ function changeSlide(delta) {
         state.currentSlide = newSlide;
         renderSlide();
         updateControls();
+        notifySlideChange();
+    }
+}
+
+// Notify parent of slide change
+function notifySlideChange() {
+    if (window.parent !== window) {
+        window.parent.postMessage({
+            type: 'slide-changed',
+            slideIndex: state.currentSlide
+        }, '*');
     }
 }
 
