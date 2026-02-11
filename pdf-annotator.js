@@ -859,9 +859,10 @@ window.addEventListener('message', async (event) => {
         const pageNumber = event.data.pageNumber;
         const hideControls = event.data.hideControls;
 
-        // Hide some controls if requested (for annotate mode)
+        // Hide controls if requested (for annotate mode)
         if (hideControls) {
-            document.body.classList.add('annotate-mode');
+            const controls = document.querySelector('.controls');
+            if (controls) controls.style.display = 'none';
             const header = document.querySelector('header');
             if (header) header.style.display = 'none';
         }
