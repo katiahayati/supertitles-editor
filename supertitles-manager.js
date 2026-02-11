@@ -178,10 +178,30 @@ function handleIframeMessage(event) {
     }
 }
 
+// Reset all state and reload iframes
+function resetState() {
+    // Reload iframes to clear all internal state
+    presentationFrame.src = presentationFrame.src;
+    annotationFrame.src = annotationFrame.src;
+
+    // Reset local state
+    state.setName = null;
+    state.setFileName = null;
+    state.presentationName = null;
+    state.annotationName = null;
+    state.presentationData = null;
+    state.annotationData = null;
+    state.currentPage = 1;
+    state.hasUnsavedChanges = false;
+}
+
 // Create new set
 function createNewSet() {
     const name = prompt('Enter supertitle set name:');
     if (!name) return;
+
+    // Reset everything first
+    resetState();
 
     state.setName = name;
     state.presentationName = 'New presentation';
@@ -204,22 +224,24 @@ function createNewSet() {
     };
     clearUnsavedChanges();
 
-    // Send to iframes
-    presentationFrame.contentWindow.postMessage({
-        type: 'load-data',
-        data: state.presentationData,
-        metadata: {
-            fileName: state.presentationName
-        }
-    }, '*');
+    // Wait for iframes to reload before sending data
+    setTimeout(() => {
+        presentationFrame.contentWindow.postMessage({
+            type: 'load-data',
+            data: state.presentationData,
+            metadata: {
+                fileName: state.presentationName
+            }
+        }, '*');
 
-    annotationFrame.contentWindow.postMessage({
-        type: 'load-data',
-        data: state.annotationData,
-        metadata: {
-            fileName: state.annotationName
-        }
-    }, '*');
+        annotationFrame.contentWindow.postMessage({
+            type: 'load-data',
+            data: state.annotationData,
+            metadata: {
+                fileName: state.annotationName
+            }
+        }, '*');
+    }, 500);
 
     enableEditing();
     updateUI();
@@ -237,6 +259,9 @@ async function handleSetUpload(e) {
         if (!setData.version || !setData.presentation) {
             throw new Error('Invalid supertitles set file format');
         }
+
+        // Reset everything first
+        resetState();
 
         state.setName = setData.name || file.name.replace('.supertitles', '');
         state.setFileName = file.name.replace('.supertitles', ''); // Remember filename for auto-save
@@ -261,22 +286,24 @@ async function handleSetUpload(e) {
 
             clearUnsavedChanges();
 
-            // Send to iframes
-            presentationFrame.contentWindow.postMessage({
-                type: 'load-data',
-                data: state.presentationData,
-                metadata: {
-                    fileName: state.presentationName
-                }
-            }, '*');
+            // Wait for iframes to reload before sending data
+            setTimeout(() => {
+                presentationFrame.contentWindow.postMessage({
+                    type: 'load-data',
+                    data: state.presentationData,
+                    metadata: {
+                        fileName: state.presentationName
+                    }
+                }, '*');
 
-            annotationFrame.contentWindow.postMessage({
-                type: 'load-data',
-                data: state.annotationData,
-                metadata: {
-                    fileName: state.annotationName
-                }
-            }, '*');
+                annotationFrame.contentWindow.postMessage({
+                    type: 'load-data',
+                    data: state.annotationData,
+                    metadata: {
+                        fileName: state.annotationName
+                    }
+                }, '*');
+            }, 500);
 
             enableEditing();
             updateUI();
@@ -305,22 +332,24 @@ async function handleSetUpload(e) {
 
             clearUnsavedChanges();
 
-            // Send to iframes
-            presentationFrame.contentWindow.postMessage({
-                type: 'load-data',
-                data: state.presentationData,
-                metadata: {
-                    fileName: state.presentationName
-                }
-            }, '*');
+            // Wait for iframes to reload before sending data
+            setTimeout(() => {
+                presentationFrame.contentWindow.postMessage({
+                    type: 'load-data',
+                    data: state.presentationData,
+                    metadata: {
+                        fileName: state.presentationName
+                    }
+                }, '*');
 
-            annotationFrame.contentWindow.postMessage({
-                type: 'load-data',
-                data: state.annotationData,
-                metadata: {
-                    fileName: state.annotationName
-                }
-            }, '*');
+                annotationFrame.contentWindow.postMessage({
+                    type: 'load-data',
+                    data: state.annotationData,
+                    metadata: {
+                        fileName: state.annotationName
+                    }
+                }, '*');
+            }, 500);
 
             enableEditing();
             updateUI();
