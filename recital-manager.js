@@ -644,7 +644,7 @@ async function exportCombinedPdf() {
                 }
 
                 // Draw slide number annotation (centered on page)
-                const markerSize = 40;
+                const markerSize = 25;
                 const markerX = width / 2;
                 const markerY = height / 2;
 
@@ -715,7 +715,7 @@ async function exportCombinedPdf() {
                 console.log(`\nNumbering annotations starting from ${slideNumber}:`);
                 const pages = sourcePdf.getPages();
                 // Use consistent small marker size for all sets
-                const markerSize = 40;
+                const markerSize = 25;
 
                 const numberFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
 
