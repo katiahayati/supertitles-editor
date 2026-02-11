@@ -6,6 +6,7 @@ const state = {
     pdfDoc: null,
     pdfData: null,
     originalPdfFile: null,
+    fileName: '',
     currentPage: 1,
     totalPages: 0,
     scale: 1.5,
@@ -38,6 +39,7 @@ const markerSizeIncrease = document.getElementById('marker-size-increase');
 const markerSizeDecrease = document.getElementById('marker-size-decrease');
 const markerSizeDisplay = document.getElementById('marker-size-display');
 const deletePageBtn = document.getElementById('delete-page');
+const fileNameDisplay = document.getElementById('file-name');
 
 // Initialize
 function init() {
@@ -93,6 +95,7 @@ async function loadPdf(file, clearState = true) {
     try {
         // Store the original file
         state.originalPdfFile = file;
+        state.fileName = file.name;
 
         const arrayBuffer = await file.arrayBuffer();
 
@@ -118,6 +121,7 @@ async function loadPdf(file, clearState = true) {
         }
 
         updateAnnotationCounter();
+        updateFileNameDisplay();
 
         dropZone.classList.add('hidden');
         await renderPage(state.currentPage);
@@ -165,6 +169,27 @@ let pendingNavigation = null;
 async function handleKeyPress(e) {
     // Only handle arrow keys if not typing in an input
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        return;
+    }
+
+    // Handle Ctrl+S for save
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (!saveAnnotationsBtn.disabled) {
+            saveAnnotations();
+        }
+        return;
+    }
+
+    // Handle zoom shortcuts
+    if (e.key === '=' || e.key === '+') {
+        e.preventDefault();
+        zoom(0.1);
+        return;
+    }
+    if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        zoom(-0.1);
         return;
     }
 
@@ -232,10 +257,16 @@ function notifyPageChange() {
 function updatePageControls() {
     const activePage = getActivePage(state.currentPage);
     const activePages = getActivePages();
-    pageInfo.textContent = `Page ${activePage} of ${activePages.length}`;
+    pageInfo.textContent = state.pdfDoc ? `Page ${activePage} of ${activePages.length}` : 'No document';
     prevPageBtn.disabled = state.currentPage === 1;
     nextPageBtn.disabled = state.currentPage === state.totalPages;
     deletePageBtn.disabled = activePages.length <= 1; // Can't delete last page
+}
+
+function updateFileNameDisplay() {
+    if (fileNameDisplay) {
+        fileNameDisplay.textContent = state.fileName || 'No project loaded';
+    }
 }
 
 // Get active (non-deleted) pages
@@ -607,7 +638,8 @@ async function handleAnnotationsUpload(e) {
             // Load the PDF from the project file (don't clear state)
             const pdfArrayBuffer = base64ToArrayBuffer(pdfData);
             const pdfBlob = new Blob([pdfArrayBuffer], { type: 'application/pdf' });
-            const pdfFile = new File([pdfBlob], data.metadata?.pdfFileName || 'document.pdf', { type: 'application/pdf' });
+            const fileName = data.metadata?.fileName || data.metadata?.pdfFileName || file.name;
+            const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
             await loadPdf(pdfFile, false);
 
