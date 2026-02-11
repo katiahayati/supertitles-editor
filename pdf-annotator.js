@@ -857,6 +857,13 @@ window.addEventListener('message', async (event) => {
         const data = event.data.data;
         const metadata = event.data.metadata;
         const pageNumber = event.data.pageNumber;
+        const hideControls = event.data.hideControls;
+
+        // Hide controls if requested (for annotate mode)
+        if (hideControls) {
+            const controls = document.querySelector('.controls');
+            if (controls) controls.style.display = 'none';
+        }
 
         // Apply settings FIRST before loading PDF so zoom is correct
         if (data.settings) {

@@ -523,6 +523,7 @@ function toggleMode() {
                 type: 'load-data',
                 data: state.annotationData,
                 pageNumber: state.currentPage,
+                hideControls: true,
                 metadata: {
                     fileName: state.annotationName
                 }
