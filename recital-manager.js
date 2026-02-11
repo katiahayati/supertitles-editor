@@ -635,11 +635,13 @@ async function exportCombinedPdf() {
                 const slides = item.data.presentation.slides || [];
                 const deletedPages = item.data.annotation.settings?.deletedPages || [];
 
+                console.log(`\n========================================`);
                 console.log(`Processing supertitles set: ${item.name}`);
                 console.log(`Annotations count: ${annotations.length}`);
                 console.log(`Slides count: ${slides.length}`);
                 console.log(`Deleted pages:`, deletedPages);
                 console.log(`Starting slide number: ${slideNumber}`);
+                console.log(`All annotations:`, annotations);
 
                 if (!pdfData) {
                     console.warn(`No PDF data for supertitles set: ${item.name}`);
@@ -662,26 +664,16 @@ async function exportCombinedPdf() {
                     return a.x - b.x;
                 });
 
-                // Create a mapping from old annotation IDs to new slide numbers
-                // We need to number them sequentially across all pages
-                const annotationMap = {};
+                // Number annotations sequentially based on sorted order
+                // Skip annotations on deleted pages
                 let currentNumber = slideNumber;
-                sortedAnnotations.forEach((ann) => {
-                    // Skip annotations on deleted pages
-                    if (!deletedPages.includes(ann.page)) {
-                        annotationMap[ann.id] = currentNumber;
-                        currentNumber++;
-                    }
-                });
+                console.log(`\nNumbering annotations starting from ${slideNumber}:`);
 
                 // Copy pages and add renumbered annotations
                 const pages = sourcePdf.getPages();
                 const markerSize = item.data.annotation.settings?.markerSize || 40;
 
                 const numberFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
-
-                // Count non-deleted slides for this set
-                let slidesAddedCount = 0;
 
                 for (let i = 0; i < pages.length; i++) {
                     const pageNum = i + 1;
@@ -703,9 +695,10 @@ async function exportCombinedPdf() {
                         return ann.page === pageNum && !deletedPages.includes(ann.page);
                     });
 
-                    // Draw renumbered annotations
+                    // Draw annotations with sequential numbers
+                    console.log(`\nDrawing ${pageAnnotations.length} annotations on page ${pageNum}:`);
                     for (const ann of pageAnnotations) {
-                        const newNumber = annotationMap[ann.id];
+                        console.log(`  Drawing annotation ${ann.id} as number ${currentNumber} at (${ann.x}, ${ann.y})`);
 
                         // Convert from normalized coordinates (0-1) to PDF coordinates
                         // Annotations are stored as: x = (clickX - rect.left) / rect.width
@@ -715,7 +708,7 @@ async function exportCombinedPdf() {
                         const pdfY = height - (ann.y * height);
 
                         // Draw circle (tighter around the number)
-                        const numberText = newNumber.toString();
+                        const numberText = currentNumber.toString();
                         const numberSize = markerSize * 0.6;
                         const circleSize = markerSize * 0.7; // Reduced from full markerSize
 
@@ -737,13 +730,16 @@ async function exportCombinedPdf() {
                             font: numberFont,
                             color: rgb(0, 0, 0)
                         });
-                    }
 
-                    slidesAddedCount++;
+                        currentNumber++;
+                    }
                 }
 
-                // Increment slide number by the actual number of pages added (non-deleted)
-                slideNumber += slidesAddedCount;
+                // Set slide number to the next number after all annotations
+                // currentNumber already has the correct value from the mapping loop
+                console.log(`\nFinished processing set. Setting slideNumber from ${slideNumber} to ${currentNumber}`);
+                slideNumber = currentNumber;
+                console.log(`========================================\n`);
             }
         }
 
