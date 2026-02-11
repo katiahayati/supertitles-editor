@@ -907,7 +907,7 @@ function applySettings() {
         document.getElementById('marker-size-value').textContent = state.markerSize;
     }
     if (state.settings.deletedPages) {
-        state.deletedPages = new Set(state.settings.deletedPages);
+        state.deletedPages = state.settings.deletedPages;
     }
 }
 
