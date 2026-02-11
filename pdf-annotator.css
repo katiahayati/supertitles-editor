@@ -466,3 +466,11 @@ header h1 {
     background: #c82333;
     transform: scale(1.1);
 }
+
+.hide-in-annotate-mode {
+    display: flex;
+}
+
+body.annotate-mode .hide-in-annotate-mode {
+    display: none !important;
+}
