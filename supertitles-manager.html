@@ -214,6 +214,10 @@
         }
 
         /* Annotate mode styles */
+        .annotate-mode header {
+            display: none;
+        }
+
         .annotate-mode .tabs {
             display: none;
         }
@@ -225,7 +229,7 @@
         #annotate-view {
             display: none;
             flex-direction: column;
-            height: calc(100vh - 260px);
+            height: calc(100vh - 120px);
         }
 
         .annotate-mode #annotate-view {
@@ -233,12 +237,14 @@
         }
 
         #annotate-presentation {
-            height: 25%;
+            height: 200px;
             border-bottom: 2px solid #dee2e6;
+            flex-shrink: 0;
         }
 
         #annotate-annotation {
-            height: 75%;
+            flex: 1;
+            min-height: 0;
         }
 
         #annotate-presentation iframe,

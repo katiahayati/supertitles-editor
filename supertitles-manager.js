@@ -62,7 +62,7 @@ function setupIframes() {
     // We'll load the editors as separate pages
     presentationFrame.src = 'presentation-editor.html';
     annotationFrame.src = 'pdf-annotator.html';
-    annotatePresentationFrame.src = 'presentation-editor.html';
+    annotatePresentationFrame.src = 'presentation-viewer.html';
     annotateAnnotationFrame.src = 'pdf-annotator.html';
 }
 
@@ -131,6 +131,14 @@ function handleIframeMessage(event) {
                     }
                 }, '*');
             }
+        }
+    } else if (event.data.type === 'presentation-viewer-ready') {
+        // Presentation viewer is ready, load data if we have it
+        if (state.presentationData) {
+            annotatePresentationFrame.contentWindow.postMessage({
+                type: 'load-data',
+                data: state.presentationData
+            }, '*');
         }
     }
 }

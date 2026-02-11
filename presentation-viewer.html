@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presentation Viewer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .controls {
+            padding: 10px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            background: #667eea;
+            color: white;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .slide-info {
+            font-weight: 600;
+            color: #495057;
+        }
+
+        .slide-viewer {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow: auto;
+        }
+
+        .slide-content {
+            width: 100%;
+            max-width: 800px;
+        }
+
+        .slide-content h1 {
+            font-family: 'Cinzel', serif;
+            font-weight: 700;
+            color: #333;
+            font-size: 2em;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .slide-content h2 {
+            color: #555;
+            font-size: 1.5em;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .slide-content p {
+            color: #555;
+            line-height: 1.6;
+            font-size: 1.2em;
+            white-space: pre-wrap;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #6c757d;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div class="controls">
+        <button id="prev-slide" class="btn" disabled>←</button>
+        <span id="slide-info" class="slide-info">No presentation loaded</span>
+        <button id="next-slide" class="btn" disabled>→</button>
+    </div>
+
+    <div class="slide-viewer">
+        <div class="slide-content">
+            <div class="empty-state">No presentation loaded</div>
+        </div>
+    </div>
+
+    <script src="presentation-viewer.js"></script>
+</body>
+</html>
