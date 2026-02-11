@@ -182,7 +182,12 @@ function handleIframeMessage(event) {
 function resetState() {
     // Exit annotate mode if active
     if (document.body.classList.contains('annotate-mode')) {
-        toggleAnnotateMode();
+        document.body.classList.remove('annotate-mode');
+        state.isAnnotateMode = false;
+        const toggleModeBtn = document.getElementById('toggle-mode');
+        if (toggleModeBtn) {
+            toggleModeBtn.textContent = 'Annotate Mode';
+        }
     }
 
     // Reload iframes to clear all internal state
