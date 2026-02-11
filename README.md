@@ -13,20 +13,14 @@ This toolkit provides four integrated applications for managing supertitles:
 
 ## Quick Start
 
-### Prerequisites
+Simply open any of the HTML files in your web browser:
 
-- A modern web browser (Chrome, Firefox, Safari, Edge)
-- Python 3 (for local server)
+- `pdf-annotator.html` - Annotate PDF scores
+- `presentation-editor.html` - Create and edit slides
+- `supertitles-manager.html` - Link presentations with PDFs
+- `recital-manager.html` - Combine multiple sets into a recital
 
-### Running the Application
-
-```bash
-# Start a local web server
-python3 -m http.server 8080
-
-# Open in browser
-# Navigate to http://localhost:8080
-```
+All applications run entirely in your browser—no server or installation required.
 
 ## Workflow
 
