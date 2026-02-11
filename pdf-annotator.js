@@ -345,19 +345,12 @@ function handleMouseMove(e) {
     state.wasDragging = true;
 
     // Find the marker element
+    if (!annotationsLayer) return;
     const marker = annotationsLayer.querySelector(`[data-annotation-id="${state.dragging.id}"]`);
     if (!marker) return;
 
-    // Get the canvas for this marker's page
-    let targetCanvas;
-    if (state.viewMode === 'paginated') {
-        targetCanvas = canvas;
-    } else {
-        const pageContainer = marker.closest('.page-container');
-        targetCanvas = pageContainer.querySelector('.page-canvas');
-    }
-
-    const rect = targetCanvas.getBoundingClientRect();
+    // Get the canvas rectangle
+    const rect = canvas.getBoundingClientRect();
 
     // Calculate new position relative to canvas
     const canvasX = e.clientX - rect.left;
