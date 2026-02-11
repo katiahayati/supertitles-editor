@@ -121,6 +121,62 @@ body {
     padding: 0 16px;
     font-size: 13px;
     color: #6c757d;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.unsaved-indicator {
+    color: #dc3545;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.menu-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px;
+    cursor: default;
+}
+
+.menu-control:hover {
+    background: transparent;
+}
+
+.marker-size-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.size-btn {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.size-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.marker-size-value {
+    font-size: 13px;
+    color: #495057;
+    font-weight: 500;
+    min-width: 40px;
+    text-align: center;
 }
 
 .control-group {

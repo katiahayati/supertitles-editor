@@ -17,7 +17,9 @@ const state = {
     dragOffset: { x: 0, y: 0 },
     wasDragging: false,
     markerSize: 40, // Default marker size in pixels
-    deletedPages: [] // Track deleted page numbers
+    deletedPages: [], // Track deleted page numbers
+    hasUnsavedChanges: false,
+    settings: {}
 };
 
 // DOM elements
@@ -32,6 +34,8 @@ const nextPageBtn = document.getElementById('next-page');
 const pageInfo = document.getElementById('page-info');
 const zoomInBtn = document.getElementById('zoom-in');
 const zoomOutBtn = document.getElementById('zoom-out');
+const zoomInMenuBtn = document.getElementById('zoom-in-menu');
+const zoomOutMenuBtn = document.getElementById('zoom-out-menu');
 const zoomLevel = document.getElementById('zoom-level');
 const dropZone = document.getElementById('drop-zone');
 const canvasWrapper = document.getElementById('canvas-wrapper');
@@ -40,6 +44,7 @@ const markerSizeDecrease = document.getElementById('marker-size-decrease');
 const markerSizeDisplay = document.getElementById('marker-size-display');
 const deletePageBtn = document.getElementById('delete-page');
 const fileNameDisplay = document.getElementById('file-name');
+const unsavedIndicator = document.getElementById('unsaved-indicator');
 
 // Initialize
 function init() {
@@ -55,10 +60,20 @@ function setupEventListeners() {
     nextPageBtn.addEventListener('click', () => changePage(1));
     zoomInBtn.addEventListener('click', () => zoom(0.1));
     zoomOutBtn.addEventListener('click', () => zoom(-0.1));
+    if (zoomInMenuBtn) zoomInMenuBtn.addEventListener('click', () => zoom(0.1));
+    if (zoomOutMenuBtn) zoomOutMenuBtn.addEventListener('click', () => zoom(-0.1));
     canvasWrapper.addEventListener('click', handleCanvasClick);
     markerSizeIncrease.addEventListener('click', () => adjustMarkerSize(5));
     markerSizeDecrease.addEventListener('click', () => adjustMarkerSize(-5));
     deletePageBtn.addEventListener('click', deleteCurrentPage);
+
+    // Warn before closing with unsaved changes
+    window.addEventListener('beforeunload', (e) => {
+        if (state.hasUnsavedChanges) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 
     // Keyboard navigation
     document.addEventListener('keydown', handleKeyPress);
@@ -122,6 +137,9 @@ async function loadPdf(file, clearState = true) {
 
         updateAnnotationCounter();
         updateFileNameDisplay();
+        if (clearState) {
+            clearUnsavedChanges();
+        }
 
         dropZone.classList.add('hidden');
         await renderPage(state.currentPage);
@@ -269,6 +287,20 @@ function updateFileNameDisplay() {
     }
 }
 
+function markUnsavedChanges() {
+    state.hasUnsavedChanges = true;
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'inline';
+    }
+}
+
+function clearUnsavedChanges() {
+    state.hasUnsavedChanges = false;
+    if (unsavedIndicator) {
+        unsavedIndicator.style.display = 'none';
+    }
+}
+
 // Get active (non-deleted) pages
 function getActivePages() {
     const pages = [];
@@ -304,6 +336,7 @@ async function deleteCurrentPage() {
 
     // Remove annotations for this page
     state.annotations = state.annotations.filter(a => a.page !== state.currentPage);
+    markUnsavedChanges();
 
     // Navigate to next available page
     const currentIndex = activePages.indexOf(state.currentPage);
@@ -386,6 +419,7 @@ function handleCanvasClick(e) {
 
     state.annotations.push(annotation);
     state.annotationCounter++;
+    markUnsavedChanges();
     notifyParent();
 
     renderAnnotations();
@@ -518,6 +552,7 @@ function createAnnotationMarker(annotation, targetCanvas = null) {
 // Delete annotation
 function deleteAnnotation(id) {
     state.annotations = state.annotations.filter(a => a.id !== id);
+    markUnsavedChanges();
     renderAnnotations();
     notifyParent();
 }
@@ -587,7 +622,7 @@ async function saveAnnotations() {
         a.click();
         URL.revokeObjectURL(url);
 
-        alert('Project saved successfully!');
+        clearUnsavedChanges();
     } catch (error) {
         console.error('Error saving project:', error);
         alert('Error saving project. Please try again.');

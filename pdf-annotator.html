@@ -32,16 +32,25 @@
                 <button class="menu-title">Edit</button>
                 <div class="menu-dropdown">
                     <button id="delete-page" class="menu-item" disabled>Delete Current Page</button>
+                    <div class="menu-divider"></div>
+                    <div class="menu-item menu-control">
+                        <span>Marker Size:</span>
+                        <div class="marker-size-controls">
+                            <button id="marker-size-decrease" class="size-btn">-</button>
+                            <span id="marker-size-display" class="marker-size-value">40px</span>
+                            <button id="marker-size-increase" class="size-btn">+</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="menu">
                 <button class="menu-title">View</button>
                 <div class="menu-dropdown">
-                    <button id="zoom-in" class="menu-item">
+                    <button id="zoom-in-menu" class="menu-item">
                         <span>Zoom In</span>
                         <span class="menu-shortcut">+</span>
                     </button>
-                    <button id="zoom-out" class="menu-item">
+                    <button id="zoom-out-menu" class="menu-item">
                         <span>Zoom Out</span>
                         <span class="menu-shortcut">-</span>
                     </button>
@@ -50,6 +59,7 @@
             <div class="menu-spacer"></div>
             <div class="menu-info">
                 <span id="file-name">No project loaded</span>
+                <span id="unsaved-indicator" class="unsaved-indicator" style="display: none;">●</span>
             </div>
         </div>
 
@@ -63,12 +73,9 @@
                     <span>→</span>
                 </button>
                 <div class="toolbar-divider"></div>
+                <button id="zoom-out" class="toolbar-btn">-</button>
                 <span id="zoom-level">100%</span>
-                <div class="toolbar-divider"></div>
-                <span class="toolbar-label">Marker:</span>
-                <button id="marker-size-decrease" class="toolbar-btn">-</button>
-                <span id="marker-size-display" class="toolbar-value">40px</span>
-                <button id="marker-size-increase" class="toolbar-btn">+</button>
+                <button id="zoom-in" class="toolbar-btn">+</button>
             </div>
 
             <div id="canvas-wrapper">
