@@ -77,7 +77,6 @@ function createNewPresentation() {
     updateFileNameDisplay();
     clearUnsavedChanges();
 
-    addSlide();
     enableEditing();
     updateUI();
     notifyParent();
