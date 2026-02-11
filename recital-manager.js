@@ -782,10 +782,10 @@ async function exportCombinedPdf() {
                     }
                 }
 
-                // Set slide number to the next number after all annotations
-                // currentNumber already has the correct value from the mapping loop
-                console.log(`\nFinished processing set. Setting slideNumber from ${slideNumber} to ${currentNumber}`);
-                slideNumber = currentNumber;
+                // Set slide number to the next number after all slides in this set
+                // Increment by the number of slides, not annotations
+                slideNumber += slides.length;
+                console.log(`\nFinished processing set. Incremented slideNumber by ${slides.length} slides to ${slideNumber}`);
                 console.log(`========================================\n`);
             }
         }
