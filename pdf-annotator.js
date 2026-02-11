@@ -857,6 +857,12 @@ window.addEventListener('message', async (event) => {
         const metadata = event.data.metadata;
         const pageNumber = event.data.pageNumber;
 
+        // Apply settings FIRST before loading PDF so zoom is correct
+        if (data.settings) {
+            state.settings = { ...state.settings, ...data.settings };
+            applySettings();
+        }
+
         if (data.pdf) {
             // Load PDF from base64
             state.pdfData = data.pdf;
@@ -873,11 +879,6 @@ window.addEventListener('message', async (event) => {
         if (data.annotations) {
             state.annotations = data.annotations;
             renderAnnotations();
-        }
-
-        if (data.settings) {
-            state.settings = { ...state.settings, ...data.settings };
-            applySettings();
         }
     } else if (event.data.type === 'goto-page') {
         if (event.data.pageNumber !== undefined && event.data.pageNumber >= 1 && event.data.pageNumber <= state.totalPages) {
@@ -917,12 +918,12 @@ async function loadPdfFromBytes(arrayBuffer, pageNumber) {
 // Apply settings from loaded data
 function applySettings() {
     if (state.settings.zoom) {
-        state.zoom = state.settings.zoom;
+        state.scale = state.settings.zoom;
+        zoomLevel.textContent = Math.round(state.scale * 100) + '%';
     }
     if (state.settings.markerSize) {
         state.markerSize = state.settings.markerSize;
-        document.getElementById('marker-size').value = state.markerSize;
-        document.getElementById('marker-size-value').textContent = state.markerSize;
+        markerSizeDisplay.textContent = state.markerSize + 'px';
     }
     if (state.settings.deletedPages) {
         state.deletedPages = state.settings.deletedPages;
