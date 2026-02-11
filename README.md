@@ -31,20 +31,7 @@ All applications run entirely in your browser—no server or installation requir
    - Design your supertitle slides with translations, lyrics, or text
    - Export as `.odp` format (OpenDocument Presentation)
 
-2. **Import and Edit** (if needed)
-   - Open `presentation-editor.html`
-   - **File → Import from ODP**
-   - Make any necessary edits
-   - **File → Save Project** (saves as `.json`)
-
-3. **Annotate Your Score**
-   - Open `pdf-annotator.html`
-   - **File → New Project** and load your PDF score
-   - Click to add numbered annotations where each slide should appear
-   - Drag markers to adjust positioning
-   - **File → Save Project** (saves as `.pdfannotations`)
-
-4. **Link Presentation with Annotations**
+4. **Link Translations with Score**
    - Open `supertitles-manager.html`
    - **File → New Set**
    - The presentation editor and PDF annotator will load
@@ -73,34 +60,6 @@ All applications run entirely in your browser—no server or installation requir
    - **File → Export Presentation** - Complete slide deck as HTML
    - **File → Export Combined PDF** - All scores with annotations
 
-## Features
-
-### PDF Annotator
-- Load and annotate PDF scores
-- Numbered markers with customizable size
-- Delete individual pages or annotations
-- Zoom controls for precise placement
-- Save/load annotation projects
-
-### Presentation Editor
-- Import from ODP files
-- Multiple slide layouts (title, title+subtitle, title+content, content only)
-- Drag-and-drop slide reordering
-- Real-time preview
-- Export to HTML (Reveal.js)
-
-### Supertitles Manager
-- Integrated presentation and annotation editing
-- **Annotate Mode** - Side-by-side view for precise alignment
-- Automatic change tracking
-- Embedded project saving (self-contained files)
-
-### Recital Manager
-- Combine multiple supertitle sets
-- Add custom title slides between pieces
-- Reorder items with drag-and-drop
-- Export complete presentation and combined PDF
-- Perfect for multi-song recitals and concerts
 
 ## Keyboard Shortcuts
 
@@ -115,56 +74,6 @@ All applications run entirely in your browser—no server or installation requir
 - `.pdfannotations` - PDF annotation project files
 - `.supertitles` - Combined presentation + annotation sets
 - `.recital` - Complete recital with multiple sets
-
-## Tips
-
-- **Use high-quality PDFs** for best annotation results
-- **Export from Google Slides**: File → Download → ODP Document
-- **Export from LibreOffice**: File → Save As → ODP
-- **Save frequently** - Unsaved changes indicator (●) appears when needed
-- **Annotate Mode** in Supertitles Manager helps align slides with score measures
-- **Test your workflow** with a single song before creating a full recital
-
-## Browser Compatibility
-
-- Chrome/Edge (recommended)
-- Firefox
-- Safari
-
-## Development
-
-### Running Tests
-
-Install dependencies:
-```bash
-npm install
-```
-
-Run tests:
-```bash
-npm test
-```
-
-Run tests in watch mode:
-```bash
-npm run test:watch
-```
-
-Generate coverage report:
-```bash
-npm run test:coverage
-```
-
-### Test Coverage
-
-The test suite includes 86 passing tests covering:
-- Integration tests for core functionality
-- PDF export tests
-- Project file save/load tests
-- UI interaction tests
-- Edge case handling
-
-Tests use Jest and run in headless mode.
 
 ## Version
 
