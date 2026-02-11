@@ -165,35 +165,62 @@ async function renderPage(pageNum) {
 }
 
 // Keyboard navigation
-function handleKeyPress(e) {
+// Track if we're already rendering a page navigation
+let isNavigating = false;
+let pendingNavigation = null;
+
+async function handleKeyPress(e) {
     // Only handle arrow keys if not typing in an input
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
         return;
     }
 
+    let delta = 0;
     switch(e.key) {
         case 'ArrowLeft':
         case 'ArrowUp':
             e.preventDefault();
-            changePage(-1);
+            delta = -1;
             break;
         case 'ArrowRight':
         case 'ArrowDown':
             e.preventDefault();
-            changePage(1);
+            delta = 1;
             break;
+        default:
+            return;
+    }
+
+    // If currently navigating, store the pending navigation
+    if (isNavigating) {
+        pendingNavigation = delta;
+        return;
+    }
+
+    // Navigate immediately
+    isNavigating = true;
+    await changePage(delta);
+    isNavigating = false;
+
+    // If there was a pending navigation, execute it
+    if (pendingNavigation !== null) {
+        const pending = pendingNavigation;
+        pendingNavigation = null;
+        isNavigating = true;
+        await changePage(pending);
+        isNavigating = false;
     }
 }
 
 // Page navigation
-function changePage(delta) {
+async function changePage(delta) {
     const activePages = getActivePages();
     const currentIndex = activePages.indexOf(state.currentPage);
     const newIndex = currentIndex + delta;
 
     if (newIndex >= 0 && newIndex < activePages.length) {
         state.currentPage = activePages[newIndex];
-        renderPage(state.currentPage);
+        await renderPage(state.currentPage);
         updatePageControls();
     }
 }
