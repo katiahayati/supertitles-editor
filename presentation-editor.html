@@ -266,18 +266,36 @@
             width: 100%;
         }
 
-        .slide-preview h1 {
+        /* Title slide - large centered title */
+        .slide-preview .title-slide h1 {
             color: #333;
             font-size: 3em;
             text-align: center;
             font-weight: bold;
         }
 
-        .slide-preview h2 {
+        /* Title + subtitle - large centered titles */
+        .slide-preview .title-subtitle-slide h1 {
+            color: #333;
+            font-size: 3em;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .slide-preview .title-subtitle-slide h2 {
             color: #555;
             margin-bottom: 15px;
             font-size: 2em;
             text-align: center;
+        }
+
+        /* Title + content - smaller left-aligned heading */
+        .slide-preview .title-content-slide h2 {
+            color: #333;
+            font-size: 1.8em;
+            text-align: left;
+            font-weight: 600;
+            margin-bottom: 20px;
         }
 
         .slide-preview p {

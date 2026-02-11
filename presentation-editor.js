@@ -487,15 +487,15 @@ function updatePreview() {
 
     if (slide.type === 'title') {
         const titleStyle = buildStyleString(slide.styles?.title);
-        previewHtml = `<div class="slide-preview"><h1 style="${titleStyle}">${escapeHtmlWithBreaks(slide.title)}</h1></div>`;
+        previewHtml = `<div class="slide-preview"><div class="title-slide"><h1 style="${titleStyle}">${escapeHtmlWithBreaks(slide.title)}</h1></div></div>`;
     } else if (slide.type === 'title-subtitle') {
         const titleStyle = buildStyleString(slide.styles?.title);
         const subtitleStyle = buildStyleString(slide.styles?.subtitle);
-        previewHtml = `<div class="slide-preview"><h1 style="${titleStyle}">${escapeHtmlWithBreaks(slide.title)}</h1><h2 style="${subtitleStyle}">${escapeHtmlWithBreaks(slide.subtitle)}</h2></div>`;
+        previewHtml = `<div class="slide-preview"><div class="title-subtitle-slide"><h1 style="${titleStyle}">${escapeHtmlWithBreaks(slide.title)}</h1><h2 style="${subtitleStyle}">${escapeHtmlWithBreaks(slide.subtitle)}</h2></div></div>`;
     } else if (slide.type === 'title-content') {
         const titleStyle = buildStyleString(slide.styles?.title);
         const contentStyle = buildStyleString(slide.styles?.content);
-        previewHtml = `<div class="slide-preview"><h2 style="${titleStyle}">${escapeHtmlWithBreaks(slide.title)}</h2><p style="${contentStyle}">${escapeHtmlWithBreaks(slide.content)}</p></div>`;
+        previewHtml = `<div class="slide-preview"><div class="title-content-slide"><h2 style="${titleStyle}">${escapeHtmlWithBreaks(slide.title)}</h2><p style="${contentStyle}">${escapeHtmlWithBreaks(slide.content)}</p></div></div>`;
     } else if (slide.type === 'content') {
         const contentStyle = buildStyleString(slide.styles?.content);
         previewHtml = `<div class="slide-preview"><p style="${contentStyle}">${escapeHtmlWithBreaks(slide.content)}</p></div>`;

@@ -90,18 +90,22 @@ function renderSlide() {
 
     switch (slide.type) {
         case 'title':
-            html = `<h1>${escapeHtml(slide.title || '')}</h1>`;
+            html = `<div class="title-slide"><h1>${escapeHtml(slide.title || '')}</h1></div>`;
             break;
         case 'title-subtitle':
             html = `
-                <h1>${escapeHtml(slide.title || '')}</h1>
-                <h2>${escapeHtml(slide.subtitle || '')}</h2>
+                <div class="title-subtitle-slide">
+                    <h1>${escapeHtml(slide.title || '')}</h1>
+                    <h2>${escapeHtml(slide.subtitle || '')}</h2>
+                </div>
             `;
             break;
         case 'title-content':
             html = `
-                <h1>${escapeHtml(slide.title || '')}</h1>
-                <p>${escapeHtml(slide.content || '')}</p>
+                <div class="title-content-slide">
+                    <h2>${escapeHtml(slide.title || '')}</h2>
+                    <p>${escapeHtml(slide.content || '')}</p>
+                </div>
             `;
             break;
         case 'content':
