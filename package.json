@@ -1,7 +1,7 @@
 {
-  "name": "pdf-annotation-tool",
-  "version": "1.0.0",
-  "description": "PDF slide annotation tool for marking slide transitions",
+  "name": "supertitles-manager",
+  "version": "1.2.1",
+  "description": "PDF annotation and presentation management system for supertitles",
   "scripts": {
     "test": "jest",
     "test:watch": "jest --watch",
@@ -10,7 +10,9 @@
   "keywords": [
     "pdf",
     "annotation",
-    "slides"
+    "slides",
+    "presentation",
+    "supertitles"
   ],
   "author": "",
   "license": "MIT",
