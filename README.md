@@ -15,6 +15,15 @@ This toolkit provides four integrated applications for managing supertitles:
 
 Here's a [video](https://youtu.be/btKFC8YLiCA) that shows how to use the tool and the philosophy behind it.
 
+## Summary Workflow
+
+1. **Create your slides** in an editor that supports ODP export (Google Slides, LibreOffice Impress for example). 
+Do this separately for every set in your recital.
+2. **Use the supertitles manager** (supertitles-manager.html) to open the presentation and the score PDF and annotate
+the PDF with where you want transitions. Do this for every set.
+3. **Use the recital manager** (recital-manager.html) to piece your recital from the sets you created.
+4. **Export full presentation and annotated score**. Regenerate them as often as you want with no additional work.
+
 ## Quick Start
 
 Simply open any of the HTML files in your web browser:
