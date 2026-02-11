@@ -28,3 +28,6 @@ coverage/
 
 # Test fixtures (users need to add their own)
 __tests__/fixtures/test.pdf
+venv/
+*.pdfannotations
+old_supers_cleaned.pdfannotations
