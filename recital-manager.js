@@ -650,7 +650,7 @@ async function exportCombinedPdf() {
 
                 // Draw number text first to calculate circle size
                 const numberText = slideNumber.toString();
-                const numberSize = 24;
+                const numberSize = markerSize * 0.6;
                 const circleSize = markerSize * 0.7; // Tighter circle
 
                 // Draw circle
