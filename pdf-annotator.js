@@ -946,12 +946,24 @@ window.addEventListener('message', async (event) => {
             const header = document.querySelector('header');
             if (header) header.style.display = 'none';
 
-            // Allow container to grow to fit content
+            // Allow container to grow to fit content and disable internal scrollbars
             const container = document.querySelector('.container');
             if (container) {
                 container.style.height = 'auto';
                 container.style.minHeight = '100vh';
                 container.style.overflow = 'visible';
+            }
+
+            // Disable scrollbars on internal containers
+            const pdfContainerDiv = document.querySelector('.pdf-container > div:last-child');
+            if (pdfContainerDiv) {
+                pdfContainerDiv.style.overflow = 'visible';
+            }
+
+            const continuousWrapper = document.getElementById('continuous-canvas-wrapper');
+            if (continuousWrapper) {
+                continuousWrapper.style.maxHeight = 'none';
+                continuousWrapper.style.overflow = 'visible';
             }
         }
 
