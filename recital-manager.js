@@ -711,12 +711,8 @@ async function exportCombinedPdf() {
                     return a.x - b.x;
                 });
 
-                // Number annotations sequentially based on sorted order
-                // Skip annotations on deleted pages
-                let currentNumber = slideNumber;
-                console.log(`\nNumbering annotations starting from ${slideNumber}:`);
-
                 // Copy pages and add renumbered annotations
+                console.log(`\nNumbering annotations starting from ${slideNumber}:`);
                 const pages = sourcePdf.getPages();
                 const markerSize = item.data.annotation.settings?.markerSize || 40;
 
@@ -745,7 +741,7 @@ async function exportCombinedPdf() {
                     // Draw annotations with sequential numbers
                     console.log(`\nDrawing ${pageAnnotations.length} annotations on page ${pageNum}:`);
                     for (const ann of pageAnnotations) {
-                        console.log(`  Drawing annotation ${ann.id} as number ${currentNumber} at (${ann.x}, ${ann.y})`);
+                        console.log(`  Drawing annotation ${ann.id} as number ${slideNumber} at (${ann.x}, ${ann.y})`);
 
                         // Convert from normalized coordinates (0-1) to PDF coordinates
                         // Annotations are stored as: x = (clickX - rect.left) / rect.width
@@ -755,7 +751,7 @@ async function exportCombinedPdf() {
                         const pdfY = height - (ann.y * height);
 
                         // Draw circle (tighter around the number)
-                        const numberText = currentNumber.toString();
+                        const numberText = slideNumber.toString();
                         const numberSize = markerSize * 0.6;
                         const circleSize = markerSize * 0.7; // Reduced from full markerSize
 
@@ -778,14 +774,11 @@ async function exportCombinedPdf() {
                             color: rgb(0, 0, 0)
                         });
 
-                        currentNumber++;
+                        slideNumber++;
                     }
                 }
 
-                // Set slide number to the next number after all slides in this set
-                // Increment by the number of slides, not annotations
-                slideNumber += slides.length;
-                console.log(`\nFinished processing set. Incremented slideNumber by ${slides.length} slides to ${slideNumber}`);
+                console.log(`\nFinished processing set. slideNumber is now ${slideNumber}`);
                 console.log(`========================================\n`);
             }
         }
