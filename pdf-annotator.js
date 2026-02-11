@@ -369,8 +369,8 @@ function handleMouseMove(e) {
     state.dragging.y = y;
 
     // Update the marker position in real-time
-    marker.style.left = (x * targetCanvas.width) + 'px';
-    marker.style.top = (y * targetCanvas.height) + 'px';
+    marker.style.left = (x * rect.width) + 'px';
+    marker.style.top = (y * rect.height) + 'px';
 }
 
 // Handle mouse up to finish dragging
