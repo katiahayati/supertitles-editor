@@ -617,10 +617,11 @@ async function exportCombinedPdf() {
                 const subtitleFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
                 const numberFont = await mergedPdf.embedFont(StandardFonts.Helvetica);
 
-                // Draw title
+                // Draw title (strip newlines and other non-WinAnsi characters)
                 const titleSize = 48;
-                const titleWidth = titleFont.widthOfTextAtSize(item.data.title, titleSize);
-                page.drawText(item.data.title, {
+                const cleanTitle = item.data.title.replace(/[\n\r\t]/g, ' ');
+                const titleWidth = titleFont.widthOfTextAtSize(cleanTitle, titleSize);
+                page.drawText(cleanTitle, {
                     x: (width - titleWidth) / 2,
                     y: height - 250,
                     size: titleSize,
@@ -628,11 +629,12 @@ async function exportCombinedPdf() {
                     color: rgb(0, 0, 0)
                 });
 
-                // Draw subtitle if exists
+                // Draw subtitle if exists (strip newlines and other non-WinAnsi characters)
                 if (item.data.subtitle) {
                     const subtitleSize = 24;
-                    const subtitleWidth = subtitleFont.widthOfTextAtSize(item.data.subtitle, subtitleSize);
-                    page.drawText(item.data.subtitle, {
+                    const cleanSubtitle = item.data.subtitle.replace(/[\n\r\t]/g, ' ');
+                    const subtitleWidth = subtitleFont.widthOfTextAtSize(cleanSubtitle, subtitleSize);
+                    page.drawText(cleanSubtitle, {
                         x: (width - subtitleWidth) / 2,
                         y: height - 320,
                         size: subtitleSize,
