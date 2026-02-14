@@ -342,7 +342,7 @@ function generateRevealJsHtml(slides) {
             return `
                 <section>
                     <h1 style="${titleCss}">${escapeHtml(slide.title)}</h1>
-                    ${slide.subtitle ? `<h2 style="${subtitleCss}">${escapeHtml(slide.subtitle)}</h2>` : ''}
+                    ${slide.subtitle ? `<h2 style="${subtitleCss}; white-space: pre-wrap;">${escapeHtml(slide.subtitle)}</h2>` : ''}
                 </section>`;
         } else if (slide.type === 'title-content') {
             const titleStyle = slide.styles?.title || {};
