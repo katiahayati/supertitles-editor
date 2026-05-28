@@ -7,22 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="menubar.css">
-    <link rel="stylesheet" href="shared-styles.css">
+    <link rel="stylesheet" href="/src/styles/base.css">
+    <link rel="stylesheet" href="/src/styles/menubar.css">
+    <link rel="stylesheet" href="/src/styles/forms.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
         .container {
             max-width: 1400px;
             margin: 0 auto;
@@ -30,16 +18,6 @@
             border-radius: 12px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
             overflow: hidden;
-        }
-
-        .btn-accent {
-            background: #ff6b6b;
-            color: white;
-        }
-
-        .btn-accent:hover:not(:disabled) {
-            background: #ee5a52;
-            transform: translateY(-2px);
         }
 
         .main-content {
@@ -259,6 +237,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
-    <script src="recital-manager.js"></script>
+    <script type="module" src="/src/apps/recital-manager.js"></script>
 </body>
 </html>

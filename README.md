@@ -26,14 +26,43 @@ the PDF with where you want transitions. Do this for every set.
 
 ## Quick Start
 
-Simply open any of the HTML files in your web browser:
+The apps still run entirely in your browser with **no server at runtime** — but
+the source is now ES modules, so you build self-contained pages first.
 
-- `pdf-annotator.html` - Annotate PDF scores
-- `presentation-editor.html` - Create and edit slides
-- `supertitles-manager.html` - Link presentations with PDFs
-- `recital-manager.html` - Combine multiple sets into a recital
+```bash
+npm install
+npm run build
+```
 
-All applications run entirely in your browser—no server or installation required.
+This writes self-contained HTML files to `dist/` (all JS and CSS inlined). Open
+any of them directly in your browser — double-click or `file://`:
+
+- `dist/index.html` - Launcher linking all four apps
+- `dist/pdf-annotator.html` - Annotate PDF scores
+- `dist/presentation-editor.html` - Create and edit slides
+- `dist/supertitles-manager.html` - Link presentations with PDFs
+- `dist/recital-manager.html` - Combine multiple sets into a recital
+
+(An internet connection is still needed the first time, for the CDN libraries
+pdf.js, JSZip, pdf-lib, and Reveal.js.)
+
+## Development
+
+```bash
+npm run dev      # Vite dev server with hot reload (open the printed URL)
+npm test         # Run the unit test suite (Vitest)
+npm run test:coverage
+npm run test:e2e # Browser end-to-end tests (Playwright; needs `npx playwright install chromium` once)
+```
+
+Source layout:
+
+- `src/apps/` - one entry module per page
+- `src/shared/` - shared utilities (escaping, base64, dialogs, toast, the iframe
+  messaging protocol, the set/annotation schema, Reveal export)
+- `src/styles/` - shared CSS (`base`, `menubar`, `forms`, `pdf-annotator`)
+- `tools/` - standalone helpers (see `tools/README.md`), e.g. OCR-based
+  annotation recovery from flattened PDFs
 
 ## Workflow
 
@@ -49,11 +78,11 @@ All applications run entirely in your browser—no server or installation requir
    - **File → New Set**
    - The presentation editor and PDF annotator will load
    - Edit your presentation and add annotations
-   - **File → Save Set** (saves as `.supertitles`)
-   - This creates three files:
-     - `name.supertitles` - Combined set (all data included)
-     - `name_presentation.json` - Standalone presentation
-     - `name_annotation.pdfannotations` - Standalone annotations
+   - **File → Save Set** — saves a single self-contained `name.supertitles` file
+     (presentation + annotation + PDF all embedded)
+   - **File → Export Components** (optional) — also writes the standalone
+     `name_presentation.json` and `name_annotation.pdfannotations` files for
+     editing in the individual tools
 
 ### For a Complete Recital (Multiple Sets)
 

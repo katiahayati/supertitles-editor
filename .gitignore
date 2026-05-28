@@ -7,7 +7,6 @@
 
 # Test/example files (user-generated)
 *.pdf
-!__tests__/fixtures/test.pdf
 
 # OS files
 .DS_Store
@@ -32,6 +31,12 @@ __tests__/downloads/
 coverage/
 .nyc_output/
 
-# Test fixtures (users need to add their own)
-__tests__/fixtures/test.pdf
+# Build output
+dist/
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 venv/

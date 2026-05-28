@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supertitles Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/styles/base.css">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; }
+        .launcher {
+            max-width: 900px;
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+        h1 { font-family: 'Cinzel', serif; color: #212529; margin-bottom: 8px; }
+        .subtitle { color: #6c757d; margin-bottom: 28px; }
+        .apps { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .app-card {
+            display: block;
+            text-decoration: none;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+        .app-card:hover { border-color: #667eea; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2); transform: translateY(-2px); }
+        .app-card h2 { color: #667eea; font-size: 1.15em; margin-bottom: 6px; }
+        .app-card p { color: #6c757d; font-size: 0.9em; }
+    </style>
+</head>
+<body>
+    <div class="launcher">
+        <h1>Supertitles Manager</h1>
+        <p class="subtitle">A workflow toolkit for creating and combining recital supertitles.</p>
+        <div class="apps">
+            <a class="app-card" href="recital-manager.html">
+                <h2>Recital Manager</h2>
+                <p>Combine multiple sets into a complete recital and export the final program.</p>
+            </a>
+            <a class="app-card" href="supertitles-manager.html">
+                <h2>Supertitles Manager</h2>
+                <p>Link a presentation with an annotated score to build one set.</p>
+            </a>
+            <a class="app-card" href="presentation-editor.html">
+                <h2>Presentation Editor</h2>
+                <p>Create and edit supertitle slides, or import from ODP.</p>
+            </a>
+            <a class="app-card" href="pdf-annotator.html">
+                <h2>PDF Annotator</h2>
+                <p>Add numbered transition markers to a score PDF.</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
