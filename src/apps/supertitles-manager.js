@@ -78,8 +78,25 @@ function setupEventListeners() {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       if (!saveSetBtn.disabled) saveSet();
+      return;
+    }
+    // In annotate mode, left/right arrows step the slide preview.
+    if (state.isAnnotateMode && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      e.preventDefault();
+      stepSlide(e.key === 'ArrowRight' ? 1 : -1);
     }
   });
+}
+
+// Move the annotate-mode slide preview forward/back, clamped to the deck.
+function stepSlide(delta) {
+  const slides = state.presentationData?.slides ?? [];
+  if (!slides.length) return;
+  const next = Math.min(slides.length - 1, Math.max(0, state.currentSlide + delta));
+  if (next === state.currentSlide) return;
+  state.currentSlide = next;
+  post(annotatePresentationFrame.contentWindow, { type: MSG.GOTO_SLIDE, slideIndex: next });
 }
 
 // The annotate-mode frames are loaded once; they receive data when the user
