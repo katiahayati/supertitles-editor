@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """
-Extract magenta/purple regions from flattened PDF using image processing.
-Creates sequential annotations at detected positions.
+Extract colored annotation marks from a flattened score PDF using image
+processing, and produce a .pdfannotations file with their positions.
+
+Sheet music is grayscale (black notes on white paper), so annotation marks are
+detected as any sufficiently *saturated* (non-grayscale) pixels — regardless of
+hue. This handles red, magenta, blue, green, etc. marks without per-color tuning.
 """
 
 import sys
@@ -12,6 +16,21 @@ import cv2
 import numpy as np
 from PIL import Image
 import io
+
+# A pixel counts as a colored mark if its HSV saturation and value clear these
+# thresholds. Grayscale music sits near saturation 0; ink marks are well above.
+# Raise SATURATION_MIN if a scan has a uniform color tint (e.g. yellowed paper).
+SATURATION_MIN = 60
+VALUE_MIN = 40
+
+
+def colored_mask(img_array):
+    """Return a binary mask of non-grayscale (colored) pixels in an RGB image."""
+    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
+    saturation = hsv[:, :, 1]
+    value = hsv[:, :, 2]
+    mask = (saturation >= SATURATION_MIN) & (value >= VALUE_MIN)
+    return mask.astype(np.uint8) * 255
 
 def group_nearby_positions(positions, distance_threshold=0.05):
     """Group positions that are close together (part of the same number)."""
@@ -55,87 +74,55 @@ def group_nearby_positions(positions, distance_threshold=0.05):
 
     return grouped_positions
 
-def remove_magenta_from_page(page):
-    """Remove magenta/purple colored regions from the page using redaction."""
-    # Render page to image
+def remove_color_marks(page):
+    """Cover colored annotation marks by drawing white rectangles over them.
+
+    Drawing on top leaves the underlying scanned image untouched, so the saved
+    PDF stays close to its original size. (The previous approach,
+    add_redact_annot + apply_redactions, re-rasterized every page to a lossless
+    PNG, ballooning a 27-page score to >500 MB.)
+
+    PyMuPDF page coordinates are top-left origin with y increasing downward — the
+    same orientation as the rendered pixmap — so image pixels map to page points
+    by dividing out the render scale, with NO y-flip. (The old code flipped y to
+    a bottom-left origin, which placed the boxes in mirrored positions and left
+    the real marks untouched.)
+    """
     mat = pymupdf.Matrix(2.0, 2.0)
     pix = page.get_pixmap(matrix=mat)
 
-    # Convert to numpy array
-    img_data = pix.tobytes("png")
-    img = Image.open(io.BytesIO(img_data))
-    img_array = np.array(img)
+    img_array = np.array(Image.open(io.BytesIO(pix.tobytes("png"))))
+    mask = colored_mask(img_array)
 
-    # Convert RGB to HSV
-    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-
-    # Define range for magenta/purple color
-    lower_magenta1 = np.array([140, 50, 50])
-    upper_magenta1 = np.array([170, 255, 255])
-    lower_magenta2 = np.array([290//2, 50, 50])
-    upper_magenta2 = np.array([330//2, 255, 255])
-
-    # Create mask for magenta color
-    mask1 = cv2.inRange(hsv, lower_magenta1, upper_magenta1)
-    mask2 = cv2.inRange(hsv, lower_magenta2, upper_magenta2)
-    mask = cv2.bitwise_or(mask1, mask2)
-
-    # Find contours of magenta regions
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-    # Get page dimensions
-    page_rect = page.rect
-    page_width = page_rect.width
-    page_height = page_rect.height
+    # Map image pixels -> page points (top-left origin, y down).
+    scale_x = pix.width / page.rect.width
+    scale_y = pix.height / page.rect.height
+    white = (1, 1, 1)
+    pad = 2  # points of padding so anti-aliased edges are fully covered
 
-    # Add redaction annotations for each magenta region
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
+        rect = pymupdf.Rect(
+            x / scale_x - pad,
+            y / scale_y - pad,
+            (x + w) / scale_x + pad,
+            (y + h) / scale_y + pad,
+        )
+        page.draw_rect(rect, color=white, fill=white)
 
-        # Convert from image coordinates (2x scaled) to PDF coordinates
-        # Image: (0,0) at top-left, y increases downward
-        # PDF: (0,0) at bottom-left, y increases upward
-        pdf_x0 = (x / pix.width) * page_width
-        pdf_y0 = page_height - ((y + h) / pix.height) * page_height
-        pdf_x1 = ((x + w) / pix.width) * page_width
-        pdf_y1 = page_height - (y / pix.height) * page_height
+def find_color_marks(page, page_num):
+    """Find colored annotation marks on a page using image processing."""
 
-        # Add redaction annotation
-        rect = pymupdf.Rect(pdf_x0, pdf_y0, pdf_x1, pdf_y1)
-        page.add_redact_annot(rect, fill=(1, 1, 1))
-
-    # Apply all redactions on this page
-    page.apply_redactions()
-
-def find_magenta_numbers(page, page_num):
-    """Find magenta regions on a page using image processing."""
-
-    # Render page to image
-    mat = pymupdf.Matrix(2.0, 2.0)  # 2x zoom for better detection
+    # Render page to image (2x zoom for better detection)
+    mat = pymupdf.Matrix(2.0, 2.0)
     pix = page.get_pixmap(matrix=mat)
 
-    # Convert to numpy array
-    img_data = pix.tobytes("png")
-    img = Image.open(io.BytesIO(img_data))
-    img_array = np.array(img)
+    img_array = np.array(Image.open(io.BytesIO(pix.tobytes("png"))))
+    mask = colored_mask(img_array)
 
-    # Convert RGB to HSV for better color detection
-    hsv = cv2.cvtColor(img_array, cv2.COLOR_RGB2HSV)
-
-    # Define range for magenta/purple color
-    # Magenta in HSV: Hue around 280-320 degrees (normalized to 0-180 in OpenCV)
-    lower_magenta1 = np.array([140, 50, 50])   # Lower purple range
-    upper_magenta1 = np.array([170, 255, 255])
-
-    lower_magenta2 = np.array([290//2, 50, 50])  # Upper purple range
-    upper_magenta2 = np.array([330//2, 255, 255])
-
-    # Create mask for magenta color
-    mask1 = cv2.inRange(hsv, lower_magenta1, upper_magenta1)
-    mask2 = cv2.inRange(hsv, lower_magenta2, upper_magenta2)
-    mask = cv2.bitwise_or(mask1, mask2)
-
-    # Find contours
+    # Find contours of colored regions
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     positions = []
@@ -174,7 +161,7 @@ def extract_with_ocr(pdf_path):
         print(f"\nPage {page_num + 1}:")
         page = doc[page_num]
 
-        positions = find_magenta_numbers(page, page_num)
+        positions = find_color_marks(page, page_num)
         print(f"  Found {len(positions)} raw detections")
         all_positions.extend(positions)
 
@@ -207,15 +194,16 @@ def extract_with_ocr(pdf_path):
         }
         all_annotations.append(annotation)
 
-    # Second pass: remove magenta numbers from PDF
-    print(f"\nRemoving original magenta numbers from PDF...")
+    # Second pass: remove the colored marks from the PDF
+    print(f"\nRemoving original colored marks from PDF...")
     for page_num in range(len(doc)):
         page = doc[page_num]
-        remove_magenta_from_page(page)
+        remove_color_marks(page)
         print(f"  Cleaned page {page_num + 1}")
 
-    # Save cleaned PDF to bytes
-    pdf_bytes = doc.tobytes()
+    # Save cleaned PDF to bytes. Compress and garbage-collect so the output
+    # stays small; white-rect covering preserves the original image streams.
+    pdf_bytes = doc.tobytes(deflate=True, garbage=4, clean=True)
     pdf_base64 = base64.b64encode(pdf_bytes).decode('utf-8')
 
     settings = {
