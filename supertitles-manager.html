@@ -109,6 +109,15 @@
             font-weight: 500;
         }
 
+        #slide-mark-status.count-ok {
+            color: #1e7e34;
+        }
+
+        #slide-mark-status.count-mismatch {
+            color: #dc3545;
+            font-weight: 700;
+        }
+
         .empty-state {
             display: flex;
             align-items: center;
@@ -227,6 +236,9 @@
             </div>
             <div class="file-info-item">
                 <strong>Annotation:</strong> <span id="annotation-name">None</span>
+            </div>
+            <div class="file-info-item">
+                <strong>Slides / Marks:</strong> <span id="slide-mark-status">0 / 0</span>
             </div>
         </div>
 

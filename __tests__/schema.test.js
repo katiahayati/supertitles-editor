@@ -1,6 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import {
   normalizeSet,
+  slideMarkCheck,
   activePages,
   sortAnnotations,
   numberAnnotations,
@@ -50,6 +51,25 @@ describe('normalizeSet', () => {
 
   test('uses fallback name when set has none', () => {
     expect(normalizeSet(makeSet({ name: undefined }), 'fallback').name).toBe('fallback');
+  });
+});
+
+describe('slideMarkCheck', () => {
+  test('matches when slide count equals mark count', () => {
+    const pres = { slides: [{}, {}, {}] };
+    const ann = { annotations: [{}, {}, {}] };
+    expect(slideMarkCheck(pres, ann)).toEqual({ slides: 3, marks: 3, match: true });
+  });
+
+  test('flags a mismatch and reports both counts', () => {
+    const pres = { slides: [{}, {}, {}] };
+    const ann = { annotations: [{}, {}] };
+    expect(slideMarkCheck(pres, ann)).toEqual({ slides: 3, marks: 2, match: false });
+  });
+
+  test('treats missing data as zero counts (and 0 == 0 matches)', () => {
+    expect(slideMarkCheck(null, null)).toEqual({ slides: 0, marks: 0, match: true });
+    expect(slideMarkCheck({}, {})).toEqual({ slides: 0, marks: 0, match: true });
   });
 });
 

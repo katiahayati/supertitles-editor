@@ -2,7 +2,7 @@ import { arrayBufferToBase64 } from '../shared/base64.js';
 import { showError } from '../shared/flash.js';
 import { promptDialog, alertDialog } from '../shared/dialogs.js';
 import { createUnsavedTracker } from '../shared/unsaved.js';
-import { normalizeSet } from '../shared/schema.js';
+import { normalizeSet, slideMarkCheck } from '../shared/schema.js';
 import { MSG, post, onMessage, loadFrame } from '../shared/messaging.js';
 
 const PRESENTATION_SRC = 'presentation-editor.html';
@@ -41,6 +41,7 @@ const annotationInput = document.getElementById('annotation-input');
 const fileNameDisplay = document.getElementById('file-name');
 const presentationNameDisplay = document.getElementById('presentation-name');
 const annotationNameDisplay = document.getElementById('annotation-name');
+const slideMarkStatus = document.getElementById('slide-mark-status');
 const tabButtons = document.querySelectorAll('.tab');
 const presentationFrame = document.getElementById('presentation-frame');
 const annotationFrame = document.getElementById('annotation-frame');
@@ -344,6 +345,12 @@ function updateUI() {
   }
   presentationNameDisplay.textContent = state.presentationName || 'None';
   annotationNameDisplay.textContent = state.annotationName || 'None';
+
+  const { slides, marks, match } = slideMarkCheck(state.presentationData, state.annotationData);
+  slideMarkStatus.textContent = match ? `${slides} / ${marks} ✓` : `${slides} / ${marks} — mismatch`;
+  slideMarkStatus.classList.toggle('count-ok', match);
+  slideMarkStatus.classList.toggle('count-mismatch', !match);
+  slideMarkStatus.title = 'Each slide should have one matching annotation mark on the score';
 
   const hasSet = state.setName !== null;
   emptyState.style.display = hasSet ? 'none' : 'flex';

@@ -20,6 +20,16 @@ test('new set loads both editor iframes via the ready handshake', async ({ page 
   await expect(editor.locator('#slide-counter')).toHaveText('0 slides');
   await expect(editor.locator('#file-name')).toContainText('New presentation');
 
+  // Slide/mark sanity check: starts matched at 0 / 0.
+  await expect(page.locator('#slide-mark-status')).toContainText('0 / 0');
+  await expect(page.locator('#slide-mark-status')).toHaveClass(/count-ok/);
+
+  // Adding a slide (1) with no marks (0) must flag a mismatch in the manager.
+  await editor.locator('.menu-title', { hasText: 'Edit' }).hover();
+  await editor.locator('#add-slide').click();
+  await expect(page.locator('#slide-mark-status')).toContainText('1 / 0');
+  await expect(page.locator('#slide-mark-status')).toHaveClass(/count-mismatch/);
+
   // Annotation tab: the annotator iframe loaded with no PDF, so its drop zone shows.
   await page.locator('.tab[data-tab="annotation"]').click();
   await expect(page.frameLocator('#annotation-frame').locator('#drop-zone')).toBeVisible();

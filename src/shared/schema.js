@@ -30,6 +30,14 @@ export function normalizeSet(setData, fallbackName = 'Untitled') {
   };
 }
 
+// Each slide should correspond to one annotation mark on the score, so the two
+// counts should match. Returns the counts and whether they line up.
+export function slideMarkCheck(presentationData, annotationData) {
+  const slides = presentationData?.slides?.length ?? 0;
+  const marks = annotationData?.annotations?.length ?? 0;
+  return { slides, marks, match: slides === marks };
+}
+
 // List of 1-based page numbers that are not deleted.
 export function activePages(totalPages, deletedPages = []) {
   const deleted = new Set(deletedPages);
