@@ -36,6 +36,9 @@ const state = {
 
 const unsaved = createUnsavedTracker();
 
+// Set when this annotator is embedded read-only in the manager's annotate mode.
+let annotateEmbedded = false;
+
 const canvas = document.getElementById('pdf-canvas');
 const ctx = canvas.getContext('2d');
 const annotationsLayer = document.getElementById('annotations-layer');
@@ -169,6 +172,13 @@ let pendingNavigation = null;
 
 async function handleKeyPress(e) {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+  // In annotate mode, Tab steps the manager's slide preview rather than moving focus.
+  if (annotateEmbedded && e.key === 'Tab') {
+    e.preventDefault();
+    postToParent({ type: MSG.STEP_SLIDE, delta: e.shiftKey ? -1 : 1 });
+    return;
+  }
 
   if ((e.ctrlKey || e.metaKey) && e.key === 's') {
     e.preventDefault();
@@ -601,6 +611,7 @@ async function handleParentMessage(data) {
 // Annotate mode (embedded read-only view): let the body scroll naturally so the
 // parent iframe shows a single scrollbar.
 function applyAnnotateModeLayout() {
+  annotateEmbedded = true;
   const set = (sel, styles) => {
     const el = sel.startsWith('#') ? document.getElementById(sel.slice(1)) : document.querySelector(sel);
     if (el) Object.assign(el.style, styles);

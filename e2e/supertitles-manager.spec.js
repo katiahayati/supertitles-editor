@@ -42,12 +42,12 @@ test('new set loads both editor iframes via the ready handshake', async ({ page 
   expect(errors).toEqual([]);
 });
 
-test('arrow keys step the slide preview in annotate mode', async ({ page }) => {
+test('Tab steps the slide preview in annotate mode', async ({ page }) => {
   await page.goto('/supertitles-manager.html');
 
   await openMenu(page, 'File');
   await page.locator('#new-set').click();
-  await page.locator('.modal-input').fill('Arrows');
+  await page.locator('.modal-input').fill('Tabs');
   await page.locator('.modal-actions .btn-primary').click();
 
   // Add two slides in the embedded editor.
@@ -64,13 +64,16 @@ test('arrow keys step the slide preview in annotate mode', async ({ page }) => {
   const viewer = page.frameLocator('#annotate-presentation-frame');
   await expect(viewer.locator('#slide-info')).toContainText('Slide 2 of 2');
 
-  // Arrows on the parent page drive the preview back and forth.
-  // (Focus is on the parent frame after clicking the toggle button.)
-  await page.keyboard.press('ArrowLeft');
+  // Parent has focus after the toggle: Tab / Shift+Tab step the preview.
+  await page.keyboard.press('Shift+Tab');
   await expect(viewer.locator('#slide-info')).toContainText('Slide 1 of 2');
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Tab');
   await expect(viewer.locator('#slide-info')).toContainText('Slide 2 of 2');
-  // Clamps at the end.
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Tab'); // clamps at the last slide
   await expect(viewer.locator('#slide-info')).toContainText('Slide 2 of 2');
+
+  // Tab still works when the score frame has focus (forwarded up to the manager).
+  await page.frameLocator('#annotate-annotation-frame').locator('body').click();
+  await page.keyboard.press('Shift+Tab');
+  await expect(viewer.locator('#slide-info')).toContainText('Slide 1 of 2');
 });

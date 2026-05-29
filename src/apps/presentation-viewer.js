@@ -23,6 +23,10 @@ function setupEventListeners() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowLeft') changeSlide(-1);
     else if (e.key === 'ArrowRight') changeSlide(1);
+    else if (e.key === 'Tab') {
+      e.preventDefault();
+      changeSlide(e.shiftKey ? -1 : 1);
+    }
   });
 
   onMessage(handleMessage);

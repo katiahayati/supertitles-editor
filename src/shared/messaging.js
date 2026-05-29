@@ -15,6 +15,9 @@ export const MSG = {
   PAGE_CHANGED: 'page-changed',
   GOTO_SLIDE: 'goto-slide',
   GOTO_PAGE: 'goto-page',
+  // Sent up from an embedded annotate-mode frame to step the slide preview,
+  // so Tab works no matter which frame currently has keyboard focus.
+  STEP_SLIDE: 'step-slide',
 };
 
 const KNOWN_TYPES = new Set(Object.values(MSG));

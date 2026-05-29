@@ -80,11 +80,12 @@ function setupEventListeners() {
       if (!saveSetBtn.disabled) saveSet();
       return;
     }
-    // In annotate mode, left/right arrows step the slide preview.
-    if (state.isAnnotateMode && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+    // In annotate mode, Tab / Shift+Tab step the slide preview. (Arrow keys are
+    // left to the score, which pages it when the score frame has focus.)
+    if (state.isAnnotateMode && e.key === 'Tab') {
       if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
       e.preventDefault();
-      stepSlide(e.key === 'ArrowRight' ? 1 : -1);
+      stepSlide(e.shiftKey ? -1 : 1);
     }
   });
 }
@@ -127,6 +128,9 @@ function handleIframeMessage(data) {
     state.currentSlide = data.slideIndex;
   } else if (data.type === MSG.PAGE_CHANGED) {
     state.currentPage = data.pageNumber;
+  } else if (data.type === MSG.STEP_SLIDE) {
+    // Tab forwarded from an embedded annotate frame that had focus.
+    if (state.isAnnotateMode) stepSlide(data.delta);
   }
 }
 
