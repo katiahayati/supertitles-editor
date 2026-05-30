@@ -53,7 +53,7 @@ export function generateRevealHtml(slides, { title = 'Presentation' } = {}) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/white.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
     <style>
         .reveal { font-family: 'Roboto', sans-serif; }
         .reveal h1 { font-family: 'Cinzel', serif; font-weight: 700; text-transform: none; color: #000; }

@@ -14,7 +14,41 @@ const state = {
   recitalName: null,
   recitalFileName: null,
   items: [], // { type: 'supertitles'|'title-slide', name, data }
+  selectedIndex: null, // currently previewed item
+  previewSlideIndex: 0, // slide within the selected item being previewed
 };
+
+// Font choices for title slides in the exported reveal.js presentation. Each
+// maps to a CSS font stack. Cinzel/Roboto are the originals (loaded from Google
+// Fonts); Cormorant Garamond is also on Google Fonts; The Seasons is a system
+// font that falls back to serif if not installed on the presenting machine.
+// Sizes are em values matching the reveal "white" theme defaults (h1 2.5em,
+// h2 1.6em) so an untouched title slide looks exactly as it did before.
+const TITLE_FONTS = {
+  Cinzel: "'Cinzel', serif",
+  'Cormorant Garamond': "'Cormorant Garamond', serif",
+  'The Seasons': "'The Seasons', serif",
+  Roboto: "'Roboto', sans-serif",
+};
+const DEFAULT_TITLE_STYLE = { titleFont: 'Cinzel', titleSize: 2.5, subtitleFont: 'Roboto', subtitleSize: 1.6 };
+
+// Effective style for a title slide, falling back to defaults for older recitals
+// (and any unknown font names) so existing files keep working unchanged.
+function titleStyle(data) {
+  const s = { ...DEFAULT_TITLE_STYLE, ...(data.style || {}) };
+  if (!TITLE_FONTS[s.titleFont]) s.titleFont = DEFAULT_TITLE_STYLE.titleFont;
+  if (!TITLE_FONTS[s.subtitleFont]) s.subtitleFont = DEFAULT_TITLE_STYLE.subtitleFont;
+  return s;
+}
+
+// Per-component CSS style objects for a title slide's chosen fonts/sizes, shared
+// by the reveal.js export and the on-screen preview so they always match.
+function stylesFromTitleStyle(style) {
+  return {
+    title: { fontFamily: TITLE_FONTS[style.titleFont], fontSize: `${style.titleSize}em` },
+    subtitle: { fontFamily: TITLE_FONTS[style.subtitleFont], fontSize: `${style.subtitleSize}em` },
+  };
+}
 
 const unsaved = createUnsavedTracker();
 
@@ -31,10 +65,21 @@ const recitalList = document.getElementById('recital-list');
 const titleSlideEditor = document.getElementById('title-slide-editor');
 const titleSlideTitleInput = document.getElementById('title-slide-title');
 const titleSlideSubtitleInput = document.getElementById('title-slide-subtitle');
+const titleSlideTitleFont = document.getElementById('title-slide-title-font');
+const titleSlideTitleSize = document.getElementById('title-slide-title-size');
+const titleSlideSubtitleFont = document.getElementById('title-slide-subtitle-font');
+const titleSlideSubtitleSize = document.getElementById('title-slide-subtitle-size');
 const confirmTitleSlideBtn = document.getElementById('confirm-title-slide');
 const cancelTitleSlideBtn = document.getElementById('cancel-title-slide');
 const emptyState = document.getElementById('empty-state');
 const mainContent = document.getElementById('main-content');
+const previewStageWrap = document.getElementById('preview-stage-wrap');
+const previewStage = document.getElementById('preview-stage');
+const previewNav = document.getElementById('preview-nav');
+const previewPrev = document.getElementById('preview-prev');
+const previewNext = document.getElementById('preview-next');
+const previewCounter = document.getElementById('preview-counter');
+const previewEmpty = document.getElementById('preview-empty');
 
 function init() {
   setupEventListeners();
@@ -53,6 +98,23 @@ function setupEventListeners() {
   exportPresentationBtn.addEventListener('click', exportPresentation);
   exportPdfBtn.addEventListener('click', exportCombinedPdf);
 
+  previewPrev.addEventListener('click', () => stepPreview(-1));
+  previewNext.addEventListener('click', () => stepPreview(1));
+
+  // While the title-slide editor is open, mirror the form live in the preview.
+  [
+    titleSlideTitleInput,
+    titleSlideSubtitleInput,
+    titleSlideTitleFont,
+    titleSlideTitleSize,
+    titleSlideSubtitleFont,
+    titleSlideSubtitleSize,
+  ].forEach((el) => el.addEventListener('input', () => isEditorOpen() && renderPreview()));
+
+  // Keep the scaled preview fitting the panel as it resizes.
+  window.addEventListener('resize', scalePreview);
+  if (window.ResizeObserver) new ResizeObserver(scalePreview).observe(previewStageWrap);
+
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
@@ -68,6 +130,7 @@ async function createNewRecital() {
   state.recitalName = name;
   state.recitalFileName = null;
   state.items = [];
+  state.selectedIndex = null;
   unsaved.clear();
 
   enableEditing();
@@ -85,6 +148,7 @@ async function handleRecitalUpload(e) {
     state.recitalName = recitalData.name || file.name.replace('.recital', '');
     state.recitalFileName = file.name.replace('.recital', '');
     state.items = recitalData.items;
+    state.selectedIndex = null;
     unsaved.clear();
 
     enableEditing();
@@ -123,10 +187,36 @@ async function handleSupertitlesUpload(e) {
   supertitlesInput.value = '';
 }
 
+function setTitleStyleForm(style) {
+  titleSlideTitleFont.value = style.titleFont;
+  titleSlideTitleSize.value = style.titleSize;
+  titleSlideSubtitleFont.value = style.subtitleFont;
+  titleSlideSubtitleSize.value = style.subtitleSize;
+}
+
+function readTitleStyleForm() {
+  const size = (input, fallback) => {
+    const n = parseFloat(input.value);
+    return Number.isFinite(n) ? Math.min(10, Math.max(0.5, n)) : fallback;
+  };
+  return {
+    titleFont: titleSlideTitleFont.value,
+    titleSize: size(titleSlideTitleSize, DEFAULT_TITLE_STYLE.titleSize),
+    subtitleFont: titleSlideSubtitleFont.value,
+    subtitleSize: size(titleSlideSubtitleSize, DEFAULT_TITLE_STYLE.subtitleSize),
+  };
+}
+
+function isEditorOpen() {
+  return titleSlideEditor.style.display !== 'none';
+}
+
 function showTitleSlideEditor() {
   titleSlideEditor.style.display = 'block';
   titleSlideTitleInput.value = '';
   titleSlideSubtitleInput.value = '';
+  setTitleStyleForm(DEFAULT_TITLE_STYLE);
+  renderPreview();
   titleSlideTitleInput.focus();
 }
 
@@ -134,7 +224,9 @@ function hideTitleSlideEditor() {
   titleSlideEditor.style.display = 'none';
   titleSlideTitleInput.value = '';
   titleSlideSubtitleInput.value = '';
+  setTitleStyleForm(DEFAULT_TITLE_STYLE);
   delete titleSlideEditor.dataset.editingIndex;
+  renderPreview();
 }
 
 async function confirmAddTitleSlide() {
@@ -144,16 +236,21 @@ async function confirmAddTitleSlide() {
     return;
   }
   const subtitle = titleSlideSubtitleInput.value.trim();
+  const style = readTitleStyleForm();
   const editingIndex = titleSlideEditor.dataset.editingIndex;
 
   if (editingIndex !== undefined) {
     const index = parseInt(editingIndex, 10);
     state.items[index].data.title = title;
     state.items[index].data.subtitle = subtitle;
+    state.items[index].data.style = style;
     state.items[index].name = title;
+    state.selectedIndex = index;
   } else {
-    state.items.push({ type: 'title-slide', name: title, data: { title, subtitle } });
+    state.items.push({ type: 'title-slide', name: title, data: { title, subtitle, style } });
+    state.selectedIndex = state.items.length - 1;
   }
+  state.previewSlideIndex = 0;
 
   unsaved.mark();
   hideTitleSlideEditor();
@@ -203,7 +300,7 @@ async function exportPresentation() {
         title: item.data.title,
         subtitle: item.data.subtitle,
         content: '',
-        styles: {},
+        styles: stylesFromTitleStyle(titleStyle(item.data)),
         number: slideNumber++,
       });
     }
@@ -255,6 +352,9 @@ async function titleFonts(pdf) {
   };
 }
 
+// The combined PDF is an operator reference, not the audience-facing output, so
+// it keeps plain built-in fonts. Title-slide font styling applies only to the
+// exported reveal.js presentation (see exportPresentation / TITLE_FONTS).
 function drawTitleSlidePage(pdf, numberFont, fonts, item, slideNumber, rgb) {
   const page = pdf.addPage([612, 792]); // Letter
   const { width, height } = page.getSize();
@@ -361,6 +461,7 @@ function download(content, fileName, mime) {
 function updateUI() {
   updateFileNameDisplay();
   updateRecitalList();
+  renderPreview();
 
   const hasRecital = state.recitalName !== null;
   emptyState.style.display = hasRecital ? 'none' : 'flex';
@@ -387,7 +488,7 @@ function updateRecitalList() {
 
   state.items.forEach((item, index) => {
     const itemEl = document.createElement('div');
-    itemEl.className = 'recital-item';
+    itemEl.className = 'recital-item' + (index === state.selectedIndex ? ' selected' : '');
     itemEl.draggable = true;
     itemEl.dataset.index = index;
 
@@ -437,6 +538,8 @@ function updateRecitalList() {
       removeItem(index);
     });
 
+    itemEl.addEventListener('click', () => selectItem(index));
+
     recitalList.appendChild(itemEl);
   });
 }
@@ -461,8 +564,11 @@ function handleDrop(e) {
   const dropIndex = parseInt(e.currentTarget.dataset.index, 10);
 
   if (draggedIndex !== null && draggedIndex !== dropIndex) {
+    const selectedItem = state.selectedIndex != null ? state.items[state.selectedIndex] : null;
     const [dragged] = state.items.splice(draggedIndex, 1);
     state.items.splice(dropIndex, 0, dragged);
+    // Keep the preview pinned to the same item after the reorder.
+    if (selectedItem) state.selectedIndex = state.items.indexOf(selectedItem);
     unsaved.mark();
     updateUI();
   }
@@ -477,6 +583,9 @@ function handleDragEnd(e) {
 async function removeItem(index) {
   if (await confirmDialog('Remove this item from the recital?', { title: 'Remove item', confirmText: 'Remove' })) {
     state.items.splice(index, 1);
+    // Keep selectedIndex pointing at the right item (or clear it if removed).
+    if (state.selectedIndex === index) state.selectedIndex = null;
+    else if (state.selectedIndex != null && state.selectedIndex > index) state.selectedIndex--;
     unsaved.mark();
     updateUI();
   }
@@ -486,10 +595,137 @@ function editTitleSlide(index) {
   const item = state.items[index];
   if (item.type !== 'title-slide') return;
 
+  state.selectedIndex = index;
+  state.previewSlideIndex = 0;
   titleSlideTitleInput.value = item.data.title;
   titleSlideSubtitleInput.value = item.data.subtitle || '';
+  setTitleStyleForm(titleStyle(item.data));
   titleSlideEditor.style.display = 'block';
   titleSlideEditor.dataset.editingIndex = index;
+  renderPreview();
+}
+
+// ---- Preview ----------------------------------------------------------------
+
+function selectItem(index) {
+  state.selectedIndex = index;
+  state.previewSlideIndex = 0;
+  updateUI();
+}
+
+function stepPreview(delta) {
+  state.previewSlideIndex += delta;
+  renderPreview();
+}
+
+// CSS string from a {camelCaseProp: value} style object (matches reveal.js).
+function styleToCss(styleObj = {}) {
+  return Object.entries(styleObj)
+    .map(([k, v]) => `${k.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${v}`)
+    .join('; ');
+}
+
+// The slides a recital item contributes, normalized for rendering.
+function previewSlidesFor(item) {
+  if (item.type === 'title-slide') {
+    return [
+      {
+        type: 'title-subtitle',
+        title: item.data.title,
+        subtitle: item.data.subtitle,
+        styles: stylesFromTitleStyle(titleStyle(item.data)),
+      },
+    ];
+  }
+  return item.data?.presentation?.slides || [];
+}
+
+// One slide -> inner HTML for the preview stage. Mirrors reveal.js's structure
+// so the preview matches the exported presentation.
+function renderSlideHtml(slide) {
+  const s = slide.styles || {};
+  switch (slide.type) {
+    case 'title':
+      return `<h1 style="${styleToCss(s.title)}">${escapeHtml(slide.title || '')}</h1>`;
+    case 'title-subtitle':
+      return (
+        `<h1 style="${styleToCss(s.title)}">${escapeHtml(slide.title || '')}</h1>` +
+        (slide.subtitle
+          ? `<h2 style="${styleToCss(s.subtitle)}; white-space: pre-wrap;">${escapeHtml(slide.subtitle)}</h2>`
+          : '')
+      );
+    case 'title-content':
+      return (
+        `<h2 style="${styleToCss(s.title)}">${escapeHtml(slide.title || '')}</h2>` +
+        `<p style="${styleToCss(s.content)}; white-space: pre-wrap;">${escapeHtml(slide.content || '')}</p>`
+      );
+    case 'content':
+      return `<p style="${styleToCss(s.content)}; white-space: pre-wrap;">${escapeHtml(slide.content || '')}</p>`;
+    default:
+      return `<p>${escapeHtml(slide.title || slide.content || '')}</p>`;
+  }
+}
+
+// Fit the 960x700 stage into the panel by scaling it down.
+function scalePreview() {
+  const w = previewStageWrap.clientWidth;
+  if (w > 0) previewStage.style.transform = `scale(${w / 960})`;
+}
+
+function showPreviewStage(html) {
+  previewStage.innerHTML = html;
+  previewStageWrap.style.display = 'block';
+  previewEmpty.style.display = 'none';
+  scalePreview();
+}
+
+function showPreviewEmpty() {
+  previewStageWrap.style.display = 'none';
+  previewNav.style.display = 'none';
+  previewEmpty.style.display = 'block';
+}
+
+function renderPreview() {
+  // While editing a title slide, mirror the form live.
+  if (isEditorOpen()) {
+    const formStyle = stylesFromTitleStyle(readTitleStyleForm());
+    showPreviewStage(
+      renderSlideHtml({
+        type: 'title-subtitle',
+        title: titleSlideTitleInput.value,
+        subtitle: titleSlideSubtitleInput.value,
+        styles: formStyle,
+      }),
+    );
+    previewNav.style.display = 'none';
+    return;
+  }
+
+  const item = state.selectedIndex != null ? state.items[state.selectedIndex] : null;
+  if (!item) {
+    showPreviewEmpty();
+    return;
+  }
+
+  const slides = previewSlidesFor(item);
+  if (!slides.length) {
+    showPreviewStage('<p style="font-size: 1em; color: #999;">(no slides to preview)</p>');
+    previewNav.style.display = 'none';
+    return;
+  }
+
+  const i = Math.max(0, Math.min(state.previewSlideIndex, slides.length - 1));
+  state.previewSlideIndex = i;
+  showPreviewStage(renderSlideHtml(slides[i]));
+
+  if (slides.length > 1) {
+    previewNav.style.display = 'flex';
+    previewPrev.disabled = i === 0;
+    previewNext.disabled = i === slides.length - 1;
+    previewCounter.textContent = `Slide ${i + 1} / ${slides.length}`;
+  } else {
+    previewNav.style.display = 'none';
+  }
 }
 
 function enableEditing() {

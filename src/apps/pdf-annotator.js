@@ -4,7 +4,7 @@ import { alertDialog, confirmDialog, promptDialog } from '../shared/dialogs.js';
 import { withLoading } from '../shared/loading.js';
 import { createUnsavedTracker } from '../shared/unsaved.js';
 import { MSG, postToParent, onMessage } from '../shared/messaging.js';
-import { activePages as computeActivePages } from '../shared/schema.js';
+import { activePages as computeActivePages, numberAnnotations } from '../shared/schema.js';
 
 // pdf.js is loaded as a global UMD script in the HTML.
 const pdfjsLib = window.pdfjsLib;
@@ -376,12 +376,25 @@ function handleMouseUp() {
 
 function renderAnnotations() {
   annotationsLayer.innerHTML = '';
+  // Display-only reading-order numbers (not saved) so slides can be matched to
+  // their annotations at a glance. Mirrors the combined-PDF export numbering.
+  const { numbered } = numberAnnotations(state.annotations, state.deletedPages);
+  const numberById = new Map(numbered.map((a) => [a.id, a.number]));
   state.annotations
     .filter((a) => a.page === state.currentPage)
-    .forEach((annotation) => annotationsLayer.appendChild(createAnnotationMarker(annotation)));
+    .forEach((annotation) =>
+      annotationsLayer.appendChild(createAnnotationMarker(annotation, numberById.get(annotation.id))),
+    );
 }
 
-function createAnnotationMarker(annotation) {
+// The number badge normally sits to the marker's right; flip it left when the
+// marker is close enough to the right edge that the badge would overflow.
+function nearRightEdge(annotation) {
+  const badgeAllowance = state.markerSize / 2 + 32;
+  return annotation.x * canvas.width + badgeAllowance > canvas.width;
+}
+
+function createAnnotationMarker(annotation, number) {
   const marker = document.createElement('div');
   marker.className = 'annotation-marker';
   marker.style.width = state.markerSize + 'px';
@@ -398,6 +411,7 @@ function createAnnotationMarker(annotation) {
                   stroke="#dc3545" stroke-width="12" stroke-linecap="round"/>
             <circle cx="50" cy="50" r="8" fill="#dc3545"/>
         </svg>
+        ${number != null ? `<span class="annotation-number${nearRightEdge(annotation) ? ' flip' : ''}">${number}</span>` : ''}
     `;
 
   marker.addEventListener('mousedown', (e) => {
